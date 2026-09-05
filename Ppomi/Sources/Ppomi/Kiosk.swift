@@ -52,10 +52,14 @@ final class RingView: NSView {
 
 /// Overlay panel: does not activate us (so Stage Manager / full screen of the mirroring app stay put), does not hide
 /// when iPhone Mirroring is frontmost, and joins every app's stage so it is still drawn and hit-tested.
-/// The 뽀미 window. Normal level so it stays above other apps' windows, but every "bring to front" — AppKit's raise on a
-/// click included — lands it just *below* the mirroring window, so the phone always shows in the hole and never flickers.
+/// Keep the workbench immediately below the phone when it is raised, including ordering requests outside orderFront.
+/// Both stay at normal level so other applications cannot permanently cover the workbench.
 final class MainPanel: NSPanel {
     var phoneID: CGWindowID?
+    override func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
+        if place == .above, let p = phoneID { super.order(.below, relativeTo: Int(p)) }
+        else { super.order(place, relativeTo: otherWin) }
+    }
     override func orderFront(_ sender: Any?) {
         if let p = phoneID { order(.below, relativeTo: Int(p)) } else { super.orderFront(sender) }
     }
@@ -297,9 +301,9 @@ final class KioskController {
         p.isMovableByWindowBackground = true
         p.backgroundColor = .black
         p.isFloatingPanel = false
-        // One level under normal: the phone (a normal window) is always above the panel, so a click on the panel cannot
-        // lift it over the hole — that lift-then-reorder was a flicker of the phone on every click.
-        p.level = .normal                                   // above other apps; MainPanel keeps it just under the phone
+        // Route raises below the phone at the same level; a lower level would bury the workbench under other apps.
+        p.level = .normal
+        p.becomesKeyOnlyIfNeeded = true                     // ordinary navigation does not take keyboard focus from the phone
         p.hidesOnDeactivate = false
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllApplications, .fullScreenNone]
@@ -317,10 +321,10 @@ final class KioskController {
         if main == nil { main = makeMain() }
         wantMain = true
         if let c = content { c.workbench = workbench; mount(in: c.bands[2]); c.needsLayout = true }
-        main?.makeKeyAndOrderFront(nil)
+        main?.orderFront(nil)
     }
     private func closeMain() { wantMain = false; main?.orderOut(nil) }
-    private func hideWorkbench() { main?.orderOut(nil) }
+    private func hideWorkbench() { if main?.isVisible == true { main?.orderOut(nil) } }
 
     /// Height is the phone's, width is free above the workbench's minimum; keep the window on the visible screen.
     private func fitMain() {
@@ -351,10 +355,16 @@ final class KioskController {
         (w as? MainPanel)?.phoneID = phone.id
         if !w.isVisible { w.orderFront(nil) }
         else if let m = w as? MainPanel, m.needsReorder(under: phone.id) { w.order(.below, relativeTo: Int(phone.id)) }   // a raise or an intruder: put it back under the phone
-        if phone.rect.size != state.phoneSize { state.phoneSize = phone.rect.size; fitMain(); return }   // the hole resizes first
+        // WindowServer reports scaled intermediate frames during focus/stage animations. Never dock against those.
+        guard let frame = Mirroring.axFrame(), abs(frame.width - phone.rect.width) <= 1,
+              abs(frame.height - phone.rect.height) <= 1,
+              abs(frame.minX - phone.rect.minX) <= 1, abs(frame.minY - phone.rect.minY) <= 1 else { return }
+        if abs(frame.width - state.phoneSize.width) > 1 || abs(frame.height - state.phoneSize.height) > 1 {
+            state.phoneSize = frame.size; fitMain(); return
+        }
         let r = w.convertToScreen(c.hole.convert(c.hole.bounds, to: nil)), main = NSScreen.screens.first?.frame ?? .zero
         let target = CGPoint(x: r.minX, y: main.maxY - r.maxY)                                // AppKit -> CG
-        if abs(phone.rect.minX - target.x) > 1 || abs(phone.rect.minY - target.y) > 1 { Mirroring.place(target) }
+        if abs(frame.minX - target.x) > 1 || abs(frame.minY - target.y) > 1 { Mirroring.place(target) }
     }
 
     // MARK: the kiosk
@@ -464,20 +474,24 @@ final class KioskController {
 
     /// Each tick on the kiosk: the window is ours, so it stays where we put it; only a resize (View menu) changes the hole.
     private func pin() {
-        NSApp.setActivationPolicy(.accessory)              // SwiftUI scenes try to pull us back to .regular
+        if NSApp.activationPolicy() != .accessory { NSApp.setActivationPolicy(.accessory) }
         if NSApp.presentationOptions != Self.kioskPresentation { NSApp.presentationOptions = Self.kioskPresentation }
-        windows.forEach { $0.orderFrontRegardless() }      // Stage Manager can bury a panel that isn't restated
+        windows.filter { !$0.isVisible }.forEach { $0.orderFrontRegardless() }
         hideWorkbench()
         // ⌘⇧3/4/5: the Screenshot overlay sits at the menu-bar level (24), under a .screenSaver ring, so its crosshair
         // and toolbar were invisible. While it is up, drop the bands just below it and take focus so our .hideMenuBar
         // (an active-app option) keeps the menu bar out of the top band; back to .screenSaver when it goes.
+        let wasShooting = shooting
         shooting = Self.screenshotUp()
         let level: NSWindow.Level = shooting ? NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue - 1) : .screenSaver
         if windows.first?.level != level { windows.forEach { $0.level = level } }
         if shooting { if !NSApp.isActive { NSApp.activate() } }
-        else if let a = Mirroring.app(), !a.isActive { Mirroring.activate() }
-        guard let cur = Mirroring.windows().first else { return }
-        if cur.size != pinned.size { build() } else if cur.origin != pinned.origin { Mirroring.place(pinned.origin) }
+        else if wasShooting || !NSApp.isActive, let a = Mirroring.app(), !a.isActive { Mirroring.activate() }
+        guard let cur = Mirroring.axFrame(), let visible = Mirroring.liveWindow()?.rect,
+              abs(cur.width - visible.width) <= 1, abs(cur.height - visible.height) <= 1,
+              abs(cur.minX - visible.minX) <= 1, abs(cur.minY - visible.minY) <= 1 else { return }
+        if abs(cur.width - pinned.width) > 1 || abs(cur.height - pinned.height) > 1 { build() }
+        else if abs(cur.minX - pinned.minX) > 1 || abs(cur.minY - pinned.minY) > 1 { Mirroring.place(pinned.origin) }
     }
 
     /// The system Screenshot UI (screencaptureui) has a window on screen: a ⌘⇧3/4/5 session is in progress.
@@ -491,6 +505,7 @@ final class KioskController {
     /// otherwise just reveal ×.
     private func ringClicked(_ screen: CGPoint) {
         guard !shooting else { return }
+        windows.forEach { $0.orderFrontRegardless() }      // recover panels only when an actual click missed their hit-test path
         if closeMarkContains(screen) { leave() } else { showExitMark() }
     }
 
