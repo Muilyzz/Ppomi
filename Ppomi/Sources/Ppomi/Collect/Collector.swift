@@ -28,6 +28,23 @@ final class Collector {
     private func find(_ w: [OCR.Word], _ re: Re) -> OCR.Word? { w.first { re.search($0.text) != nil } }
     private func find(_ w: [OCR.Word], _ p: String) -> OCR.Word? { Phone.find(w, p) }
 
+    /// Imported selectors may choose a screen element, but cannot authorize a money action.
+    /// Inspect the selected OCR text as well as the selector: a broad regex such as "." is not permission.
+    static func checkedReadTarget(_ word: OCR.Word) throws -> OCR.Word {
+        guard !Footprint.isPayTarget(word.text) else {
+            throw Skip(description: "read-only collection blocked a money-action control")
+        }
+        return word
+    }
+
+    /// Only an actual back chevron is navigation. An arbitrary leftmost label may be a payment or transfer.
+    static func backTarget(in words: [OCR.Word]) -> OCR.Word? {
+        words.first {
+            0.09 < $0.y && $0.y < 0.17 && $0.x < 0.3
+                && Re(#"^[\^<〈←‹]$"#).match($0.text.trimmingCharacters(in: .whitespaces)) != nil
+        }
+    }
+
     // ---------------------------------------------------------------- the run
     /// `snapshot KAKAO KB …`; the API app needs no phone. Every app is tried even when one fails.
     func snapshot(_ keys: [String]) {
@@ -148,11 +165,8 @@ final class Collector {
         for _ in 0..<3 {
             let (_, words) = try Phone.screen()
             if find(words, home) != nil || find(words, Self.login) != nil { return true }
-            // the back chevron in the nav bar: OCR sees it as a lone '^' / '<' glyph near the top-left
-            let nav = words.filter { 0.09 < $0.y && $0.y < 0.17 }
-            let chevron = nav.first { Re(#"^[\^<〈←‹]$"#).match($0.text.trimmingCharacters(in: .whitespaces)) != nil } ?? nav.min { $0.x < $1.x }
-            guard let chevron else { break }
-            try Phone.tap(chevron); Phone.sleep(2)
+            guard let chevron = Self.backTarget(in: words) else { break }
+            try Phone.tap(Self.checkedReadTarget(chevron)); Phone.sleep(2)
         }
         return true
     }
@@ -172,10 +186,10 @@ final class Collector {
         var (png, words) = try Phone.screen()
         if let r = try dismiss(words) { (png, words) = r }
         if let b = find(words, Self.extend) { try Phone.tap(b); Phone.sleep(1.5); (png, words) = try Phone.screen() }   // keep the idle session
-        if let e = cfg.expand, let more = find(words, e) { try Phone.tap(more); Phone.sleep(1.5); (png, words) = try Phone.screen() }
+        if let e = cfg.expand, let more = find(words, e) { try Phone.tap(Self.checkedReadTarget(more)); Phone.sleep(1.5); (png, words) = try Phone.screen() }
         var found = OCR.balances(words, account: cfg.account)
         if let l = cfg.list, let ctl = find(words, l) {           // the full account list, unless it bounced to a login screen
-            try Phone.tap(ctl); Phone.sleep(3)
+            try Phone.tap(Self.checkedReadTarget(ctl)); Phone.sleep(3)
             let (p2, w2) = try Phone.screen()
             if find(w2, Self.login) == nil {
                 let more = OCR.balances(w2, account: cfg.account)
@@ -195,6 +209,7 @@ final class Collector {
             // a tap on the account number copies it and the app then offers a transfer
             guard let row = words.first(where: { Re(cfg.tx!).search($0.text) != nil && $0.y > 0.2 && Re(#"^\W*\d"#).match($0.text) == nil })
             else { log("\(cfg.key): no account row for transactions"); return }
+            _ = try Self.checkedReadTarget(row)
             try Phone.tap(row.x + min(row.w, 0.2) / 2, row.y + row.h / 2); Phone.sleep(3)
             (_, words) = try Phone.screen()
             if let r = try dismiss(words) { words = r.1 }

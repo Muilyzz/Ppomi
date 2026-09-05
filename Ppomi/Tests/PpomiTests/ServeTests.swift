@@ -58,6 +58,8 @@ final class ServeTests: XCTestCase {
             try db.insertTransaction(OCR.Tx(ts: TS.string(KST.day(KST.today, -i)), kind: "approval", amount: 1000 * (i + 1), merchant: m, card: "체크카드", cumulative: 0, uid: "u\(i)", rows: 0...0), app: "KAKAO")
         }
         try db.setState("installed:페이코", "0")
+        XCTAssertTrue(t.payPreference().contains("토스: 미확인")) // A catalog entry alone never proves installation.
+        try db.setState("installed:toss", "1")
         let p = t.payPreference()
         XCTAssertTrue(p.contains("카카오뱅크 체크카드: 3건 6,000원"), p)
         XCTAssertTrue(p.contains("토스: 설치됨") && p.contains("페이코: 미설치") && p.contains("네이버: 미확인"), p)

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "id": "yeogi",
+  "name": "여기어때",
+  "version": "0.1.0",
+  "aliases": [
+    "YEOGI"
+  ],
+  "icon": "icon.jpg",
+  "launch": {
+    "search": "여기어때"
+  },
+  "capabilities": [
+    {
+      "id": "prepare-booking",
+      "title": "숙소 탐색 · 객실 비교 · 예약 준비",
+      "description": "숙소와 객실 조건을 비교하고 예약을 준비합니다. 최종 결제는 사용자의 승인 뒤 한 번만 시도합니다.",
+      "inputs": [
+        {
+          "name": "destination",
+          "label": "숙소 또는 지역",
+          "required": true
+        },
+        {
+          "name": "checkIn",
+          "label": "체크인 날짜",
+          "required": true
+        },
+        {
+          "name": "checkOut",
+          "label": "체크아웃 날짜",
+          "required": true
+        },
+        {
+          "name": "guests",
+          "label": "인원",
+          "required": true
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-1",
+          "title": "▶여기어때",
+          "kind": "open"
+        },
+        {
+          "id": "step-2",
+          "title": "⊙최근 본 상품|검색",
+          "kind": "tap"
+        },
+        {
+          "id": "step-3",
+          "title": "⊙모든 객실 보기",
+          "kind": "tap"
+        },
+        {
+          "id": "step-4",
+          "title": "⊙예약하기",
+          "kind": "tap"
+        },
+        {
+          "id": "step-5",
+          "title": "👤로그인",
+          "kind": "human"
+        },
+        {
+          "id": "step-6",
+          "title": "↓⊙필수",
+          "kind": "scroll"
+        },
+        {
+          "id": "step-7",
+          "title": "🎟쿠폰 받기",
+          "kind": "coupon"
+        },
+        {
+          "id": "step-8",
+          "title": "🔍결제수단",
+          "kind": "payment-method"
+        },
+        {
+          "id": "step-9",
+          "title": "✋승인",
+          "kind": "human"
+        },
+        {
+          "id": "step-10",
+          "title": "⊙결제하기",
+          "kind": "payment"
+        }
+      ]
+    }
+  ],
+  "humanSteps": [
+    "로그인·Face ID·본인 인증은 직접 진행합니다. 자격 증명은 뽀미가 입력하지 않습니다.",
+    "최종 결제는 사람이 승인한 뒤 한 번만 탭합니다."
+  ],
+  "guide": "guide.md",
+  "iconSource": "https://apps.apple.com/kr/app/id884043462"
+}

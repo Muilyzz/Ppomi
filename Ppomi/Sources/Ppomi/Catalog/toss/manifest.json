@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "toss",
+  "name": "토스",
+  "version": "0.1.0",
+  "aliases": [
+    "TOSS"
+  ],
+  "icon": "icon.png",
+  "launch": {
+    "search": "toss"
+  },
+  "capabilities": [
+    {
+      "id": "read-accounts",
+      "title": "연결된 자산의 잔액 읽기",
+      "description": "자산 탭에서 연결된 계좌의 잔액을 읽습니다. 다른 은행 앱과 겹치는 계좌는 합산하지 않습니다.",
+      "inputs": [],
+      "steps": [
+        {
+          "id": "step-1",
+          "title": "▶토스(search: toss)",
+          "kind": "open"
+        },
+        {
+          "id": "step-2",
+          "title": "👤로그인(있으면)",
+          "kind": "human"
+        },
+        {
+          "id": "step-3",
+          "title": "⊙자산",
+          "kind": "tap"
+        },
+        {
+          "id": "step-4",
+          "title": "phone_screen 잔액",
+          "kind": "read"
+        },
+        {
+          "id": "step-5",
+          "title": "phone_key home",
+          "kind": "close"
+        }
+      ]
+    }
+  ],
+  "humanSteps": [
+    "로그인·Face ID·본인 인증은 직접 진행합니다. 자격 증명은 뽀미가 입력하지 않습니다.",
+    "은행 앱에서는 잔액과 거래내역을 읽기만 하며 이체·송금은 하지 않습니다."
+  ],
+  "guide": "guide.md",
+  "collection": {
+    "key": "TOSS",
+    "account": "통장|계좌|뱅크|은행|입출금|적금|예금|청약",
+    "scrollY": 0.5
+  }
+}

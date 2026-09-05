@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "id": "kbank",
+  "name": "케이뱅크",
+  "version": "0.1.0",
+  "aliases": [
+    "KBANK"
+  ],
+  "icon": "icon.png",
+  "launch": {
+    "search": "kbank"
+  },
+  "capabilities": [
+    {
+      "id": "read-accounts",
+      "title": "계좌 잔액 읽기",
+      "description": "계좌 목록에서 잔액을 읽습니다. 거래내역 수집은 아직 준비되지 않았습니다.",
+      "inputs": [],
+      "steps": [
+        {
+          "id": "step-1",
+          "title": "▶케이뱅크(홈 1페이지 아이콘, 없으면 Spotlight kbank)",
+          "kind": "open"
+        },
+        {
+          "id": "step-2",
+          "title": "👤로그인",
+          "kind": "human"
+        },
+        {
+          "id": "step-3",
+          "title": "⎋팝업",
+          "kind": "close"
+        },
+        {
+          "id": "step-4",
+          "title": "phone_screen 잔액",
+          "kind": "read"
+        },
+        {
+          "id": "step-5",
+          "title": "phone_key home",
+          "kind": "close"
+        }
+      ]
+    }
+  ],
+  "humanSteps": [
+    "로그인·Face ID·본인 인증은 직접 진행합니다. 자격 증명은 뽀미가 입력하지 않습니다.",
+    "은행 앱에서는 잔액과 거래내역을 읽기만 하며 이체·송금은 하지 않습니다."
+  ],
+  "guide": "guide.md",
+  "collection": {
+    "key": "KBANK",
+    "account": "통장|계좌|박스|입출금|적금|예금|청약",
+    "homeLabel": "케이뱅크",
+    "scrollY": 0.5
+  }
+}

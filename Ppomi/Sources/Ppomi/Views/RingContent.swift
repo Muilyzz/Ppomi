@@ -125,11 +125,12 @@ final class PhoneBand: NSView {
 
 /// The hole. Black like the bands, so when there is no phone it reads as an empty slot with a hint.
 final class DockView: NSView {
+    var hint = "" { didSet { if hint != oldValue { needsDisplay = true } } }
     override func draw(_ dirty: NSRect) {
         NSColor.black.setFill(); bounds.fill()
         let p = NSMutableParagraphStyle(); p.alignment = .center
         let a: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor(white: 1, alpha: 0.5), .font: NSFont.systemFont(ofSize: 13), .paragraphStyle: p]
-        let t = "iPhone 미러링을 실행하면\n그 창이 여기에 붙습니다" as NSString, h = t.size(withAttributes: a).height
+        let t = (hint.isEmpty ? "iPhone 미러링을 실행하면\n그 창이 여기에 붙습니다" : hint) as NSString, h = t.size(withAttributes: a).height
         t.draw(in: NSRect(x: 0, y: (bounds.height - h) / 2, width: bounds.width, height: h), withAttributes: a)
     }
 }

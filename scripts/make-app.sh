@@ -1,9 +1,14 @@
 #!/bin/sh
-# dist/Ppomi.app from the SwiftPM release build: scripts/make-app.sh (from anywhere). Ad-hoc signed by default — TCC keys on the
-# bundle id, so 손쉬운 사용·화면 기록·마이크 must be granted to the new app once more.
+# dist/Ppomi.app from the SwiftPM release build: scripts/make-app.sh (from anywhere).
+# Ad-hoc output is for packaging checks only: its cdhash identity changes with every build and breaks TCC continuity.
+# For the installed local app use LOCAL_SIGN_ID="Apple Development: …" so the designated requirement stays stable.
 # Developer ID + 공증:  SIGN_ID="Developer ID Application: … (TEAMID)" NOTARY_PROFILE=<keychain profile> VERSION=0.1.0 scripts/make-app.sh
 #   → hardened runtime + Ppomi.entitlements (audio-input), timestamp, notarytool submit --wait, staple, dist/Ppomi-<VERSION>.zip for download.
 set -eu
+if [ -n "${LOCAL_SIGN_ID:-}" ] && { [ -n "${SIGN_ID:-}" ] || [ -n "${NOTARY_PROFILE:-}" ]; }; then
+    echo "Use LOCAL_SIGN_ID for local development OR SIGN_ID/NOTARY_PROFILE for distribution, not both." >&2
+    exit 1
+fi
 VERSION=${VERSION:-0.1.0}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 APP=$ROOT/dist/Ppomi.app
@@ -34,6 +39,13 @@ for s in 16 32 128 256 512; do
     sips -z $((s * 2)) $((s * 2)) "$ROOT/brand/icon.png" --out "$SET/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$SET" -o "$APP/Contents/Resources/Ppomi.icns"; rm -rf "$SET"
+
+if [ -n "${LOCAL_SIGN_ID:-}" ]; then
+    codesign --force --sign "$LOCAL_SIGN_ID" --timestamp=none --identifier com.muilyzz.ppomi.phone "$APP/Contents/MacOS/phone"
+    codesign --force --sign "$LOCAL_SIGN_ID" --timestamp=none "$APP"
+    codesign --verify --deep --strict "$APP"
+    echo "$APP (local development signature; not notarized)"; exit 0
+fi
 
 if [ -z "${SIGN_ID:-}" ]; then
     codesign --force --sign - "$APP/Contents/MacOS/phone"

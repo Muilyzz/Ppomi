@@ -16,16 +16,29 @@ struct AppConfig {
 }
 
 enum Apps {
-    static let all: [AppConfig] = [
-        AppConfig(key: "KB", title: "KB스타뱅킹", search: "kb", account: #"\(\d{4}\)|\d{6}-\d{2}-\d{6}"#, expand: "^더보기", list: "내 계좌 전체보기",
-                  tx: "^KB국민ONE통장", txpage: "거래내역조회", home: "내 계좌 전체보기|나의 총 자산|이번 주 카드결제", scrollY: 0.7),
-        AppConfig(key: "KBANK", title: "케이뱅크", search: "kbank", account: "통장|계좌|박스|입출금|적금|예금|청약", homeLabel: "케이뱅크"),
-        // 카카오뱅크 debit card = the user's daily spending; its 입출금통장 거래내역 is the transaction source (자동로그인 needed)
-        AppConfig(key: "KAKAO", title: "카카오뱅크", search: "kakaobank", account: "통장|입출금|세이프박스|적금|모임|예금", tx: "통장", home: "다른금융계좌|홈 혜택"),
-        // Toss with 비밀번호 인증 1단계 shows every linked bank/card on its 자산 tab without a PIN. Its rows repeat other
-        // banks' accounts, so totals are reported per app, never summed across apps.
-        AppConfig(key: "TOSS", title: "토스", search: "toss", account: "통장|계좌|뱅크|은행|입출금|적금|예금|청약"),
-    ]
+    /// Preserve the old collector order; new packages with collection metadata join automatically.
+    static var all: [AppConfig] { configurations(from: PlaybookCatalog.load()) }
+    static func configurations(from records: [PlaybookRecord]) -> [AppConfig] {
+        let legacyOrder = ["KB", "KBANK", "KAKAO", "TOSS"]
+        return records.compactMap { record -> AppConfig? in
+            guard let value = record.manifest.collection else { return nil }
+            return AppConfig(key: value.key, title: record.name, search: record.manifest.launch.search, account: value.account,
+                             homeLabel: value.homeLabel, expand: value.expand, list: value.list, tx: value.tx,
+                             txpage: value.txpage, home: value.home, scrollY: value.scrollY)
+        }.sorted {
+            let left = legacyOrder.firstIndex(of: $0.key) ?? legacyOrder.count
+            let right = legacyOrder.firstIndex(of: $1.key) ?? legacyOrder.count
+            return left == right ? $0.key < $1.key : left < right
+        }
+    }
     static let api = ["TOSSINVEST"]                      // no phone needed
-    static func config(_ key: String) -> AppConfig? { all.first { $0.key == key } }
+    static func config(_ app: String) -> AppConfig? { config(app, from: PlaybookCatalog.load()) }
+    /// CLI, voice, and MCP use the same ID/name/alias contract; the ledger retains the collection key.
+    static func config(_ app: String, from records: [PlaybookRecord]) -> AppConfig? {
+        let query = app.trimmingCharacters(in: .whitespacesAndNewlines)
+        let record = records.first { $0.id.caseInsensitiveCompare(query) == .orderedSame }
+            ?? records.first { $0.name.caseInsensitiveCompare(query) == .orderedSame }
+            ?? records.first { $0.matches(query) }
+        return record.flatMap { configurations(from: [$0]).first }
+    }
 }

@@ -4,7 +4,14 @@
 import Foundation
 
 struct Footprint: Codable, Equatable {
-    struct Verified: Codable, Equatable { var ok = 0, fail = 0 }
+    struct Verified: Codable, Equatable {
+        struct ReplayCounts: Codable, Equatable { var ok = 0, fail = 0 }
+        var ok = 0, fail = 0
+        // Older totals include repeated brain actions. Only these counters prove automatic replay.
+        var replayOK: Int? = nil
+        var replayFail: Int? = nil
+        var replayVersions: [String: ReplayCounts]? = nil
+    }
     var id = UUID().uuidString
     var app: String
     var appVersion: String? = nil
@@ -57,20 +64,50 @@ enum Fingerprint {
 }
 
 enum FootprintStore {
-    static func url(_ app: String, in dir: URL = Playbooks.dir) -> URL {
+    static func record(_ app: String, in dir: URL = Playbooks.dir) -> PlaybookRecord? {
+        let records = PlaybookCatalog.load(in: dir, includeBundled: dir.standardizedFileURL == Playbooks.dir.standardizedFileURL)
+        return records.first { $0.id.caseInsensitiveCompare(app) == .orderedSame }
+            ?? records.first { $0.name.caseInsensitiveCompare(app) == .orderedSame }
+            ?? records.first { $0.matches(app) }
+    }
+    static func key(_ app: String, in dir: URL = Playbooks.dir) -> String { record(app, in: dir)?.id ?? app }
+    private static func legacyURL(_ app: String, in dir: URL) -> URL {
         dir.appendingPathComponent(app.replacingOccurrences(of: "/", with: "_").trimmingCharacters(in: .whitespaces) + ".jsonl")
     }
+    static func url(_ app: String, in dir: URL = Playbooks.dir) -> URL {
+        legacyURL(key(app, in: dir), in: dir)
+    }
     static func load(_ app: String, in dir: URL = Playbooks.dir) -> [Footprint] {
-        guard let raw = try? String(contentsOf: url(app, in: dir), encoding: .utf8) else { return [] }
+        // Canonical IDs survive renames. Read legacy names too, without deleting or rewriting old files.
+        let identities = record(app, in: dir)?.identities ?? [app]
+        var seen = Set<String>(), files = Set<String>(), out: [Footprint] = []
         let dec = JSONDecoder()
-        return raw.split(whereSeparator: \.isNewline).compactMap { try? dec.decode(Footprint.self, from: Data($0.utf8)) }
+        for identity in identities + [app] {
+            let file = legacyURL(identity, in: dir)
+            guard files.insert(file.path).inserted, let raw = try? String(contentsOf: file, encoding: .utf8) else { continue }
+            for line in raw.split(whereSeparator: \.isNewline) {
+                if let fp = try? dec.decode(Footprint.self, from: Data(line.utf8)), seen.insert(fp.id).inserted { out.append(fp) }
+            }
+        }
+        return out
     }
     static func append(_ app: String, _ fp: Footprint, in dir: URL = Playbooks.dir) throws { try save(app, load(app, in: dir) + [fp], in: dir) }
     /// verified.ok / .fail += 1 for that id; nothing when the id is unknown.
-    static func bump(_ app: String, id: String, ok: Bool, in dir: URL = Playbooks.dir) throws {
+    static func bump(_ app: String, id: String, ok: Bool, replay: Bool = false, version: String? = nil, in dir: URL = Playbooks.dir) throws {
         var fps = load(app, in: dir)
         guard let i = fps.firstIndex(where: { $0.id == id }) else { return }
         if ok { fps[i].verified.ok += 1 } else { fps[i].verified.fail += 1 }
+        if replay {
+            if ok { fps[i].verified.replayOK = (fps[i].verified.replayOK ?? 0) + 1 }
+            else { fps[i].verified.replayFail = (fps[i].verified.replayFail ?? 0) + 1 }
+            if let version {
+                var versions = fps[i].verified.replayVersions ?? [:]
+                var counts = versions[version] ?? .init()
+                if ok { counts.ok += 1 } else { counts.fail += 1 }
+                versions[version] = counts
+                fps[i].verified.replayVersions = versions
+            }
+        }
         try save(app, fps, in: dir)
     }
     // ponytail: whole-file rewrite per write; fine for a few hundred lines per app

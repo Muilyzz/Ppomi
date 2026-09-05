@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "kb",
+  "name": "KB스타뱅킹",
+  "version": "0.1.0",
+  "aliases": [
+    "KB"
+  ],
+  "icon": "icon.png",
+  "launch": {
+    "search": "kb"
+  },
+  "capabilities": [
+    {
+      "id": "read-accounts",
+      "title": "계좌 잔액 · 거래내역 읽기",
+      "description": "홈의 계좌 잔액과 거래내역을 읽어 장부 수집에 사용합니다.",
+      "inputs": [],
+      "steps": [
+        {
+          "id": "step-1",
+          "title": "▶KB스타뱅킹(search: kb)",
+          "kind": "open"
+        },
+        {
+          "id": "step-2",
+          "title": "👤로그인",
+          "kind": "human"
+        },
+        {
+          "id": "step-3",
+          "title": "⊙로그인 연장",
+          "kind": "tap"
+        },
+        {
+          "id": "step-4",
+          "title": "⊙더보기",
+          "kind": "tap"
+        },
+        {
+          "id": "step-5",
+          "title": "⊙내 계좌 전체보기",
+          "kind": "tap"
+        },
+        {
+          "id": "step-6",
+          "title": "phone_screen 잔액",
+          "kind": "read"
+        },
+        {
+          "id": "step-7",
+          "title": "▶KB스타뱅킹",
+          "kind": "open"
+        },
+        {
+          "id": "step-8",
+          "title": "⊙KB국민ONE통장",
+          "kind": "tap"
+        },
+        {
+          "id": "step-9",
+          "title": "↓거래내역조회(y 0.7)",
+          "kind": "scroll"
+        },
+        {
+          "id": "step-10",
+          "title": "phone_key home",
+          "kind": "close"
+        }
+      ]
+    }
+  ],
+  "humanSteps": [
+    "로그인·Face ID·본인 인증은 직접 진행합니다. 자격 증명은 뽀미가 입력하지 않습니다.",
+    "은행 앱에서는 잔액과 거래내역을 읽기만 하며 이체·송금은 하지 않습니다."
+  ],
+  "guide": "guide.md",
+  "collection": {
+    "key": "KB",
+    "account": "\\(\\d{4}\\)|\\d{6}-\\d{2}-\\d{6}",
+    "expand": "^더보기",
+    "list": "내 계좌 전체보기",
+    "tx": "^KB국민ONE통장",
+    "txpage": "거래내역조회",
+    "home": "내 계좌 전체보기|나의 총 자산|이번 주 카드결제",
+    "scrollY": 0.7
+  }
+}

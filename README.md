@@ -27,14 +27,17 @@
 **다운로드**: 현재 [v0.1.0 프리릴리스](https://github.com/Muilyzz/Ppomi/releases)는 애드혹 서명된 테스트 빌드이며, Apple 공증 전입니다. `.zip`을 풀어 `Ppomi.app`을 `/Applications`로 옮길 수 있지만 macOS에서 실행이 차단될 수 있습니다. 일반 배포용 Developer ID 서명·공증 빌드는 준비 중입니다.
 
 ```sh
-# 직접 앱으로
-scripts/make-app.sh          # → dist/Ppomi.app, /Applications 로 옮겨 쓰세요
+# 로컬 설치용 앱: 보유한 Apple Development 인증서 이름 사용
+LOCAL_SIGN_ID="Apple Development: …" scripts/make-app.sh
+# → dist/Ppomi.app. 이후 빌드도 같은 인증서와 설치 경로를 사용하세요.
 
 # 또는 소스로
 cd Ppomi && swift run Ppomi
 ```
 
 미러링 창을 만지는 `phone` CLI(저장소 루트 `phone.swift`)는 첫 사용 때 자동으로 빌드됩니다.
+
+인증서 없이 `scripts/make-app.sh`를 실행하면 패키징 확인용 애드혹 빌드를 만듭니다. 애드혹 빌드는 코드가 바뀔 때마다 macOS 권한 연결이 끊길 수 있으므로 기존 설치본에 반복해서 덮어쓰지 마세요. 개발 서명으로 처음 전환할 때는 손쉬운 사용·화면 기록을 다시 허용해야 합니다. 배포용 서명·공증에는 별도의 `SIGN_ID`·`NOTARY_PROFILE`을 사용합니다.
 
 장부 위치는 기본이 저장소의 `data/ledger.db`(저장소 밖에서 실행하면 `~/Library/Application Support/Ppomi/data/ledger.db`)이고, 환경변수 `PPOMI_DB` 또는 설정 창에서 바꿀 수 있습니다(`Ledger/Model.swift` 의 `AppSettings.dbPath`). 발자국·스크린샷·`.env` 는 그 옆을 따라갑니다.
 
@@ -83,7 +86,7 @@ args = ["--mcp"]
 
 소스로 쓸 때는 경로를 `Ppomi/.build/debug/Ppomi` 로 바꾸면 됩니다.
 
-내놓는 도구: `phone_screen` `phone_tap` `phone_type` `phone_key` `phone_scroll` `phone_open` `phone_installed` `pay_preference` `confirm_payment` `record_spend` `ask_choice` `balances` `today_spending` `transactions` `sql`(읽기 전용) `read_playbook` `note_footprint`.
+내놓는 도구: `phone_screen` `phone_tap` `phone_type` `phone_key` `phone_scroll` `phone_open` `phone_installed` `pay_preference` `confirm_payment` `record_spend` `ask_choice` `balances` `today_spending` `transactions` `sql`(읽기 전용) `list_playbooks` `read_playbook` `note_footprint` `run_combo`.
 
 ## 첫 사용
 
@@ -107,7 +110,9 @@ args = ["--mcp"]
 
 ## 발자국
 
-`data/playbooks/` 에 앱마다 Markdown 파일이 하나씩 있습니다. `공통.md` 는 기호와 모든 앱의 규칙, 나머지는 앱별 콤보와 버릇입니다. 두뇌는 작업 전에 `read_playbook` 으로 읽고, 새로 알게 된 버릇은 `note_footprint` 로 날짜와 함께 한 줄 남깁니다. 금액·이름·예약번호 같은 개인정보는 적지 않습니다. 파일이니 아무 편집기로 고쳐도 됩니다.
+앱 ID·이름·아이콘·실행 방법·가능한 작업과 입력·절차는 하나의 [플레이북 데이터 패키지](docs/playbook-format.md)로 정의합니다. 기본 패키지 원본은 `Ppomi/Sources/Ppomi/Catalog/`이며 키오스크·MCP·앱 실행·허브가 이를 함께 읽습니다. **절차 → 가져오기**에서 새 패키지 폴더를 추가하면 코드 수정·재빌드 없이 표시됩니다.
+
+두뇌는 `list_playbooks`로 앱 ID를 찾고 `read_playbook`으로 명세를 읽습니다. `phone_open`도 같은 ID를 받습니다. 현장에서 배운 버릇은 기존 `data/playbooks/*.md`, 재생할 동작은 로컬 `.jsonl`에 보존합니다. `run_combo`는 기록된 화면이 맞는 동안만 재생하며, 현재 패키지 버전의 실제 재생 결과를 별도로 셉니다. 새 명세를 추가한 것만으로 전체 절차가 검증된 것은 아닙니다. 금액·이름·예약번호 같은 개인정보는 플레이북에 적지 않습니다.
 
 ## 개인정보
 

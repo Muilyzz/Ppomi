@@ -6,6 +6,8 @@ data/*.log
 data/telemetry.jsonl
 # Local screen fingerprints; publish only reviewed, sanitized hub records.
 data/playbooks/*.jsonl
+# User-imported packages stay local; reviewed defaults live in Sources/Ppomi/Catalog.
+data/playbooks/catalog/
 # build products
 Ppomi/.build/
 Ppomi/.swiftpm/
@@ -19,6 +21,9 @@ dist/
 *.icns
 *.iconset/
 hub/node_modules/
+# Generated from Ppomi/Sources/Ppomi/Catalog; deployment runs scripts/sync-catalog.mjs.
+hub/catalog/
+hub/.catalog-staging-*/
 .vercel/
 data/style*
 data/report-*.html

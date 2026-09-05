@@ -263,6 +263,13 @@ final class KioskController {
         content?.phase = state.phase; windows.forEach { ($0.contentView as? RingView)?.phase = state.phase }   // the rim
         content?.band.sync(); kioskBand?.sync()                                                              // caption, ask buttons
         if state.shown != lastShown { lastShown = state.shown; showMain() }
+        // A newly installed binary may need its own Accessibility grant. Keep the workbench usable instead of
+        // repeatedly trying to stage a window we cannot control (stage waits on AX on the main thread).
+        guard Permissions.accessibility else {
+            if up { tear() }
+            if state.kioskOn && !wantMain { showMain() }
+            return
+        }
         // Stage Manager keeps iPhone Mirroring as a ~47x148 strip; axWindow then reports none and donut stays false.
         // Pull it on stage first so toggleKiosk / the green button actually build the ring.
         if state.kioskOn && !up && Date().timeIntervalSince(lastStage) > 2 {
@@ -314,13 +321,19 @@ final class KioskController {
             MainActor.assumeIsolated { self?.wantMain = false }
         }
         content = c
-        fitMain()
         return p
     }
     private func showMain() {
         if main == nil { main = makeMain() }
         wantMain = true
-        if let c = content { c.workbench = workbench; mount(in: c.bands[2]); c.needsLayout = true }
+        // fitMain needs self.main. During makeMain it has not been assigned yet, leaving a fresh window unconstrained.
+        fitMain()
+        if let c = content {
+            c.workbench = workbench
+            c.needsLayout = true
+            c.layoutSubtreeIfNeeded()                         // the bands and docking hole must exist before mounting
+            mount(in: c.bands[2])
+        }
         main?.orderFront(nil)
     }
     private func closeMain() { wantMain = false; main?.orderOut(nil) }
@@ -329,8 +342,13 @@ final class KioskController {
     /// Height is the phone's, width is free above the workbench's minimum; keep the window on the visible screen.
     private func fitMain() {
         guard let p = main ?? nil, let c = content else { return }
-        c.phoneSize = state.phoneSize
-        let min = RingContent.size(bandWidth: RingContent.bandMin, phone: state.phoneSize)
+        Self.fitMain(p, content: c, phoneSize: state.phoneSize)
+    }
+
+    /// Window geometry has no dependency on phone permissions or on a live mirroring window.
+    static func fitMain(_ p: NSPanel, content c: RingContent, phoneSize: CGSize) {
+        c.phoneSize = phoneSize
+        let min = RingContent.size(bandWidth: RingContent.bandMin, phone: phoneSize)
         p.contentMinSize = min
         p.contentMaxSize = CGSize(width: 10000, height: min.height)
         let cur = p.contentRect(forFrameRect: p.frame).size
@@ -338,6 +356,7 @@ final class KioskController {
         if let v = (p.screen ?? NSScreen.main)?.visibleFrame, p.frame.minY < v.minY || p.frame.maxY > v.maxY {
             p.setFrameOrigin(CGPoint(x: p.frame.minX, y: Swift.max(v.minY, Swift.min(p.frame.minY, v.maxY - p.frame.height))))
         }
+        c.layoutSubtreeIfNeeded()
     }
 
     /// Each tick off the kiosk: keep the mirroring window over the window's hole and just above the window, so the phone
@@ -346,12 +365,21 @@ final class KioskController {
     /// the phone) pull it back on stage.
     private func dock() {
         guard wantMain, let w = main, let c = content else { return }
+        guard Permissions.accessibility else {
+            (w as? MainPanel)?.phoneID = nil                 // a hidden phone must not pull the workbench behind it
+            c.hole.hint = "미러링 창을 붙이려면\n설정 › 시작하기에서 손쉬운 사용을 허용해 주세요"
+            c.band.sync()
+            if !w.isVisible { w.orderFront(nil) }
+            return
+        }
         guard let phone = Mirroring.liveWindow() else {
+            c.hole.hint = Mirroring.app() == nil ? "" : "미러링 창을 연결하고 있습니다"
             if Mirroring.app() == nil { if !w.isVisible { w.orderFront(nil) }; return }       // no mirroring at all: the hole says so
             if NSApp.isActive { if Date().timeIntervalSince(lastStage) > 2 { lastStage = Date(); Mirroring.stage() } }
             else if w.isVisible { w.orderOut(nil) }
             return
         }
+        c.hole.hint = ""
         (w as? MainPanel)?.phoneID = phone.id
         if !w.isVisible { w.orderFront(nil) }
         else if let m = w as? MainPanel, m.needsReorder(under: phone.id) { w.order(.below, relativeTo: Int(phone.id)) }   // a raise or an intruder: put it back under the phone
@@ -362,6 +390,7 @@ final class KioskController {
         if abs(frame.width - state.phoneSize.width) > 1 || abs(frame.height - state.phoneSize.height) > 1 {
             state.phoneSize = frame.size; fitMain(); return
         }
+        c.layoutSubtreeIfNeeded()                            // a resize may still have a pending ring layout
         let r = w.convertToScreen(c.hole.convert(c.hole.bounds, to: nil)), main = NSScreen.screens.first?.frame ?? .zero
         let target = CGPoint(x: r.minX, y: main.maxY - r.maxY)                                // AppKit -> CG
         if abs(frame.minX - target.x) > 1 || abs(frame.minY - target.y) > 1 { Mirroring.place(target) }
@@ -474,6 +503,7 @@ final class KioskController {
 
     /// Each tick on the kiosk: the window is ours, so it stays where we put it; only a resize (View menu) changes the hole.
     private func pin() {
+        guard Permissions.accessibility else { tear(); return }
         if NSApp.activationPolicy() != .accessory { NSApp.setActivationPolicy(.accessory) }
         if NSApp.presentationOptions != Self.kioskPresentation { NSApp.presentationOptions = Self.kioskPresentation }
         windows.filter { !$0.isVisible }.forEach { $0.orderFrontRegardless() }

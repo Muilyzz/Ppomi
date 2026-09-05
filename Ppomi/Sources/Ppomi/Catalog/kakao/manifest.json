@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "kakao",
+  "name": "카카오뱅크",
+  "version": "0.1.0",
+  "aliases": [
+    "KAKAO",
+    "kakaobank"
+  ],
+  "icon": "icon.png",
+  "launch": {
+    "search": "kakaobank"
+  },
+  "capabilities": [
+    {
+      "id": "read-accounts",
+      "title": "계좌 잔액 · 거래내역 읽기",
+      "description": "계좌 잔액과 입출금통장의 거래내역을 읽어 장부 수집에 사용합니다.",
+      "inputs": [],
+      "steps": [
+        {
+          "id": "step-1",
+          "title": "▶카카오뱅크(search: kakaobank)",
+          "kind": "open"
+        },
+        {
+          "id": "step-2",
+          "title": "👤로그인",
+          "kind": "human"
+        },
+        {
+          "id": "step-3",
+          "title": "⎋이체할까요",
+          "kind": "close"
+        },
+        {
+          "id": "step-4",
+          "title": "phone_screen 잔액",
+          "kind": "read"
+        },
+        {
+          "id": "step-5",
+          "title": "⊙통장",
+          "kind": "tap"
+        },
+        {
+          "id": "step-6",
+          "title": "↓거래내역",
+          "kind": "scroll"
+        },
+        {
+          "id": "step-7",
+          "title": "phone_key home",
+          "kind": "close"
+        }
+      ]
+    }
+  ],
+  "humanSteps": [
+    "로그인·Face ID·본인 인증은 직접 진행합니다. 자격 증명은 뽀미가 입력하지 않습니다.",
+    "은행 앱에서는 잔액과 거래내역을 읽기만 하며 이체·송금은 하지 않습니다."
+  ],
+  "guide": "guide.md",
+  "collection": {
+    "key": "KAKAO",
+    "account": "통장|입출금|세이프박스|적금|모임|예금",
+    "tx": "통장",
+    "home": "다른금융계좌|홈 혜택",
+    "scrollY": 0.5
+  }
+}

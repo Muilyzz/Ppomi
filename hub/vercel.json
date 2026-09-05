@@ -1,4 +1,7 @@
 {
   "cleanUrls": true,
-  "functions": { "api/*.js": { "maxDuration": 10 } }
+  "functions": {
+    "api/playbooks.js": { "maxDuration": 10, "includeFiles": "catalog/**" },
+    "api/*.js": { "maxDuration": 10 }
+  }
 }

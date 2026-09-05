@@ -110,7 +110,7 @@ final class VoiceSession {
         인사 뒤 첫 말이 너에게 한 말이 아니면(옆 사람 대화, TV) 아무 말 없이 end_conversation 을 부른다.
 
         """
-    private static let playbookSpec = ToolSpec(name: "read_playbook", description: "앱별 절차(콤보 순서와 그 앱의 버릇)를 읽는다. 폰 앱 작업 전에 먼저 부른다. app 을 비우면 공통 규칙과 앱 목록.", params: ["app": ("string", "앱 이름, 예: 여기어때")])
+    private static let playbookSpec = ToolSpec(name: "read_playbook", description: "공통 명세와 앱별 절차, 실제 재생 기록을 읽는다. 폰 앱 작업 전에 먼저 부른다. app 을 비우면 공통 규칙과 앱 목록.", params: ["app": ("string", "플레이북 ID 또는 앱 이름, 예: yeogi")])
     private static let endSpec = ToolSpec(name: "end_conversation", description: "사용자가 대화를 끝내자고 하면(그만, 끝, 됐어) 짧게 인사한 뒤 부른다. 음성 세션이 닫힌다.")
 
     /// The wake word was heard: the local listener gives up the microphone and a realtime session takes it. Its transcripts
@@ -126,7 +126,11 @@ final class VoiceSession {
             if name == "read_playbook" {
                 let app = (args["app"] as? String ?? "").trimmingCharacters(in: .whitespaces)
                 let all = Playbooks.all()
-                if app.isEmpty { return (all.first { $0.app == "공통" }?.text ?? "") + "\n앱: " + all.map(\.app).filter { $0 != "공통" }.joined(separator: ", ") }
+                if app.isEmpty { return PlaybookCatalog.common() + "\n앱: " + PlaybookCatalog.load().map { "\($0.id): \($0.name)" }.joined(separator: ", ") }
+                if let record = PlaybookCatalog.resolve(app) {
+                    let evidence = Playbooks.evidence(record)
+                    return Playbooks.definition(record) + "\n\n" + record.guideText + "\n저장된 걸음 \(evidence.savedSteps) · 자동 재생 성공 \(evidence.replayOK) · 자동 재생 실패 \(evidence.replayFail)"
+                }
                 return all.first { $0.app == app }?.text ?? "그 앱의 절차는 아직 없다. 공통 규칙대로 화면을 읽어 가며 진행하고, 배운 버릇은 note_playbook 으로 남겨라."
             }
             if name == "end_conversation" {                          // ponytail: 3 s so the goodbye (queued, or spoken after this result) plays out

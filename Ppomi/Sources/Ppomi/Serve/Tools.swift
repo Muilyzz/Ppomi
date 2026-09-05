@@ -296,7 +296,7 @@ final class Tools {
         T("balances", "앱별 최근 잔액(마지막 수집 기준)."),
         T("weekly_review", "최근 30일 지출·카테고리·반복결제·수입·잔액·증권 숫자(JSON). 돈 상황 전반을 물을 때 이걸 받아서 직접 정리해 답하라(사실·질문·선택지까지만, 특정 종목 매수·매도 권고 금지)."),
         T("collect_now", "아이폰 미러링으로 은행 앱을 열어 잔액·거래를 지금 수집한다(40초~수분). 조건: 아이폰이 '잠긴 채로' Mac 옆에 있어야 한다(잠금 해제 상태나 사용 중이면 미러링이 끊긴다). 그러므로 '폰 잠겨 있어?'라고 확인한 뒤, 사용자가 긍정한 직후에만 호출.",
-          ["app": ("string", "KB|KBANK|KAKAO|TOSS, 비우면 전부")]),
+          ["app": ("string", "collection 명세가 있는 플레이북의 ID·이름·별칭, 또는 TOSSINVEST. 비우면 전부")]),
         T("draft_reply", "사용자의 말투로 답장 초안 3개를 만든다. 보내지는 않는다.", ["to": ("string", nil), "brief": ("string", "전하려는 요지")], ["to", "brief"]),
         T("remind", "정해진 시각에 뽀미가 한 줄 알림을 보낸다. 사용자가 '나중에/저녁에/내일 알려줘'라고 할 때, 시각을 확인한 뒤 사용.",
           ["at": ("string", "'HH:MM'(오늘, 지났으면 내일) 또는 'YYYY-MM-DD HH:MM'"), "text": ("string", nil)], ["at", "text"]),
@@ -311,10 +311,10 @@ final class Tools {
         T("phone_tap", "아이폰 화면의 글자(정규식) 또는 좌표(x,y 0~1)를 탭한다.", ["text": ("string", "탭할 글자(정규식)"), "x": ("number", nil), "y": ("number", nil)]),
         T("phone_key", "아이폰에 키를 보낸다: home, spotlight, return, escape, delete, selectall, space, down.", ["name": ("string", nil)], ["name"]),
         T("phone_type", "아이폰의 현재 입력창에 글자를 친다. 한글·영문·숫자 그대로 주면 된다.", ["text": ("string", nil)], ["text"]),
-        T("phone_open", "Spotlight로 앱을 연다. 설치돼 있지 않으면 App Store '받기'가 보인다고 알려주고 설치는 사용자에게 맡긴다.", ["title": ("string", "앱 이름(화면에 보이는 그대로)"), "search": ("string", "Spotlight 검색어")], ["title", "search"]),
+        T("phone_open", "플레이북의 실행 정보로 앱을 연다. app에 ID 또는 이름을 주면 검색어를 자동으로 읽는다. 미등록 앱은 title/search로 열 수 있다. 설치는 사용자가 직접 한다.", ["app": ("string", "플레이북 ID 또는 앱 이름"), "title": ("string", "미등록 앱의 화면 이름"), "search": ("string", "미등록 앱의 Spotlight 검색어")]),
         T("phone_scroll", "아이폰 화면을 스크롤한다. dy 음수 = 아래로(내용이 위로).", ["dy": ("integer", "픽셀, 예: -430"), "y": ("number", "포인터 위치 0~1, 기본 0.6")], ["dy"]),
         T("run_combo", "아는 길을 두뇌 없이 재생한다. 낯선 화면·승인 지점·사용자 차례에서 멈추고 마지막 화면을 돌려준다. 폰 앱 작업은 phone_screen 전에 이걸 먼저 불러라.",
-          ["app": ("string", "앱 이름(비우면 마지막으로 연 앱)"), "max_steps": ("integer", "기본 12")]),
+          ["app": ("string", "플레이북 ID 또는 앱 이름(비우면 마지막으로 연 앱)"), "max_steps": ("integer", "기본 12")]),
         T("phone_installed", "이름을 준 앱들이 폰에 설치돼 있는지 Spotlight로 확인한다. 결제 수단을 고를 때: 토스(토스페이), 카카오톡(카카오페이), 네이버(네이버페이), 페이코 같은 결제앱 중 설치된 것만 고르라.",
           ["names": ("string", "쉼표로 구분한 앱 이름들")], ["names"]),
         T("pay_preference", "결제 수단을 고를 근거: 최근 90일 지출이 어느 계좌·카드로 나갔는지, 설치된 결제앱, 고르는 규칙. 결제 화면에 도달하면 호출해서 수단을 제안하라."),
@@ -336,10 +336,11 @@ final class Tools {
             let src = s(r[0]); let app = src.hasPrefix("app:") ? Rules.title(String(src.dropFirst(4))) : src
             return "\(app) \(s(r[1])): \(i(r[2]))건 \(i(r[3]).won)"
         }
-        var apps: [String] = Apps.all.map { "\($0.title): 설치됨" }
-        for name in ["토스", "카카오톡", "네이버", "페이코", "삼성페이"] {
-            if let v = (try? db.state("installed:\(name)")) ?? nil { apps.append("\(name): \(v == "1" ? "설치됨" : "미설치")") }
-            else if !apps.contains(where: { $0.hasPrefix(name) }) { apps.append("\(name): 미확인(phone_installed 로 확인)") }
+        var apps: [String] = [], seen = Set<String>()
+        for name in Apps.all.map(\.title) + ["토스", "카카오톡", "네이버", "페이코", "삼성페이"] where seen.insert(name).inserted {
+            let identities = FootprintStore.record(name, in: footprintDir)?.identities ?? [name]
+            let state = identities.compactMap { (try? db.state("installed:\($0)")) ?? nil }.first
+            apps.append("\(name): " + (state.map { $0 == "1" ? "설치됨" : "미설치" } ?? "미확인(phone_installed 로 확인)"))
         }
         return """
             최근 90일 지출(승인) 출처: \(spend.isEmpty ? "없음" : spend.joined(separator: " · "))
@@ -425,16 +426,20 @@ final class Tools {
     /// Every hand move goes through here (the fake phone in tests); any move ends a scroll-then-tap pairing.
     private func hand(_ fake: [String], _ real: () throws -> Void) throws { scrolled = nil; if let f = Self.fake { try f.hand(fake) } else { try real() } }
     private func sleep(_ s: Double) { if Self.fake == nil { Phone.sleep(s) } }
-    private func open(_ title: String, _ search: String) throws -> Bool {
+    private func catalog(_ app: String) -> PlaybookRecord? { FootprintStore.record(app, in: footprintDir) }
+    private func open(_ title: String, _ search: String, record: PlaybookRecord? = nil) throws -> Bool {
         var ok = true
-        try hand(["open", title]) { ok = try Collector().openApp(AppConfig(key: "ADHOC", title: title, search: search, account: "")) }
+        // Generic opening must not run the collector's navigation/transaction selectors.
+        let config = AppConfig(key: "ADHOC", title: title, search: search, account: "", homeLabel: record?.manifest.collection?.homeLabel)
+        try hand(["open", title]) { ok = try Collector().openApp(config) }
         return ok
     }
     /// A footprint of the hand move the brain just made, written silently: the screen before it, the move, the screen after
     /// (captured now unless given). Never a pay target; a step already known (same move, before ≥0.8 alike) is verified once more instead.
     private func record(_ glyph: String, _ target: String, before: [OCR.Word]? = nil, after: [OCR.Word]? = nil) {
         let bf = Fingerprint.words(from: before ?? lastWords)
-        guard let app = currentApp, !bf.isEmpty, !Footprint.isPayTarget(target), !target.contains(where: \.isNumber),   // digits: a phone/card number, a date, an amount
+        guard let app = currentApp, !bf.isEmpty, !Footprint.isPayTarget(target),
+              !target.contains(where: \.isNumber) || (glyph == "▶" && catalog(target)?.id == target), // only a declared app ID may contain digits
               let aft = try? after ?? screen() else { return }
         let fp = Footprint(app: app, glyph: glyph, target: target, fingerprintBefore: bf, fingerprintAfter: Fingerprint.words(from: aft))
         if let dup = FootprintStore.load(app, in: footprintDir).first(where: { $0.glyph == glyph && $0.target == target && Fingerprint.similarity($0.fingerprintBefore, bf) >= 0.8 }) {
@@ -447,7 +452,8 @@ final class Tools {
         switch fp.glyph {
         case "▶":                                              // "여기어때" or, as the playbooks write it, "KB스타뱅킹(search: kb)"
             let m = Re(#"^(.*?)\(search: (.*)\)$"#).search(fp.target)
-            _ = try open(m?[1] ?? fp.target, m?[2] ?? fp.target)
+            let record = catalog(m?[1] ?? fp.target)
+            _ = try open(record?.name ?? m?[1] ?? fp.target, record?.manifest.launch.search ?? m?[2] ?? fp.target, record: record)
         case "⊙": if let w = Phone.find(lastWords, fp.target), !Footprint.isPayTarget(w.text) { try hand(["tap", w.text]) { try Phone.tap(w) } }
         case "↓":
             for _ in 0..<3 {                                   // the brain may have scrolled more than once before its tap
@@ -466,7 +472,7 @@ final class Tools {
         let t0 = Date(), r = perform(name, a)
         if name.hasPrefix("phone_") {                                        // the trace: which hand, did it work, how long; the app for phone_open
             var f: [String: Any] = ["tool": name, "ok": !r.hasPrefix("오류") && !r.hasPrefix("실행 안 함"), "ms": Int(Date().timeIntervalSince(t0) * 1000)]
-            if let app = a["title"] as? String { f["app"] = app }
+            if let app = (a["app"] ?? a["title"]) as? String { f["app"] = FootprintStore.key(app, in: footprintDir) }
             Telemetry.record("phone", f, db: db)
         }
         return r
@@ -552,31 +558,41 @@ final class Tools {
                 if let g = gate(name) { return g }
                 try hand(["type", str("text")]) { try Phone.type(str("text")) }; sleep(2); record("⌨", str("text")); return "입력했다. phone_screen 으로 확인하라."
             case "phone_open":
+                let requested = str("app").isEmpty ? str("title") : str("app")
+                guard !requested.trimmingCharacters(in: .whitespaces).isEmpty else { return "오류: app 또는 title이 필요하다." }
+                let definition = catalog(requested)
+                let title = definition?.name ?? requested
+                let search = definition?.manifest.launch.search ?? (str("search").isEmpty ? title : str("search"))
                 if let g = gate(name) { return g }
                 let before = lastWords
-                let ok = try open(str("title"), str("search"))
+                let ok = try open(title, search, record: definition)
                 let words = try screen()
                 let store = Phone.find(words, "^받기$") != nil || Phone.find(words, "App Store") != nil
-                if ok { currentApp = str("title"); record("▶", str("search") == str("title") ? str("title") : "\(str("title"))(search: \(str("search")))", before: before, after: words) }
+                if ok {
+                    currentApp = definition?.id ?? title
+                    try? db.setState("installed:\(definition?.id ?? title)", "1")
+                    record("▶", definition?.id ?? (search == title ? title : "\(title)(search: \(search))"), before: before, after: words)
+                }
                 return ok ? "열었다." : (store ? "설치돼 있지 않다(App Store '받기'가 보인다). 설치는 사용자가 폰에서 직접 해야 한다; 웹이 있으면 web_text 로 대신하라." : "Spotlight에서 못 찾았다.")
             case "pay_preference": return payPreference()
             case "phone_installed":
                 if let g = gate(name) { return g }
-                let known = Set(Apps.all.map(\.title))               // the bank apps the collector reads are there by definition
                 var out: [String] = []
-                for name in str("names").split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) where !name.isEmpty {
-                    if known.contains(name) { out.append("\(name): 설치됨"); continue }
-                    try Phone.key("home"); Phone.sleep(0.8); try Phone.key("spotlight"); Phone.sleep(1.2)
-                    try Phone.type(name); Phone.sleep(2.5)
-                    let (_, words) = try Phone.screen()
-                    let hit = Phone.find(words, NSRegularExpression.escapedPattern(for: name)) != nil
+                for requested in str("names").split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) where !requested.isEmpty {
+                    let definition = catalog(requested), title = definition?.name ?? requested
+                    try hand(["key", "home"]) { try Phone.key("home") }; sleep(0.8)
+                    try hand(["key", "spotlight"]) { try Phone.key("spotlight") }; sleep(1.2)
+                    let search = definition?.manifest.launch.search ?? title
+                    try hand(["type", search]) { try Phone.type(search) }; sleep(2.5)
+                    let words = try screen()
+                    let hit = Phone.find(words, NSRegularExpression.escapedPattern(for: title)) != nil
                     let store = Phone.find(words, "^받기$") != nil
                     let verdict = hit && !store ? "설치됨" : store ? "미설치(App Store 받기)" : "못 찾음"
-                    if verdict != "못 찾음" { try? db.setState("installed:\(name)", verdict == "설치됨" ? "1" : "0") }   // remembered for pay_preference
-                    out.append("\(name): \(verdict)")
-                    try Phone.key("escape"); Phone.sleep(0.5)
+                    if verdict != "못 찾음" { try? db.setState("installed:\(definition?.id ?? title)", verdict == "설치됨" ? "1" : "0") }
+                    out.append("\(title): \(verdict)")
+                    try hand(["key", "escape"]) { try Phone.key("escape") }; sleep(0.5)
                 }
-                try Phone.key("home")
+                try hand(["key", "home"]) { try Phone.key("home") }
                 return out.joined(separator: "\n")
             case "phone_scroll":
                 if let g = gate(name) { return g }
@@ -584,16 +600,17 @@ final class Tools {
                 try hand(["scroll"]) { try Phone.run(["scroll", "\(a["dy"] as? Int ?? -430)", "0.5", "\(a["y"] as? Double ?? 0.6)"]) }; sleep(2)
                 scrolled = before; return "스크롤했다."
             case "run_combo":
-                let app = str("app").isEmpty ? (currentApp ?? "") : str("app")
+                let app = FootprintStore.key(str("app").isEmpty ? (currentApp ?? "") : str("app"), in: footprintDir)
                 guard !app.isEmpty else { return "앱 이름이 없다: app 을 주거나 phone_open 먼저." }
                 lastPNG = nil                                        // MCP attaches lastPNG: never a stale screen with a refusal
                 if let g = gate(name) { return g }
+                currentApp = app
                 let fps = FootprintStore.load(app, in: footprintDir)
                 guard !fps.isEmpty else { return "아는 길 없음: \(app). phone_screen 부터 가라." }
-                currentApp = app
                 let steps = i(a["max_steps"])
+                let version = catalog(app)?.manifest.version
                 let r = try Replay(footprints: fps, screen: { try self.screen() }, act: { try self.act($0) }, wait: { self.sleep($0) }).run(maxSteps: steps > 0 ? steps : 12)
-                for s in r.steps { try? FootprintStore.bump(app, id: s.fp.id, ok: s.ok, in: footprintDir) }
+                for s in r.steps { try? FootprintStore.bump(app, id: s.fp.id, ok: s.ok, replay: true, version: version, in: footprintDir) }
                 Telemetry.record("replay", ["app": app, "step": r.steps.count, "ok": r.outcome == .done], db: db)
                 let why: String
                 switch r.outcome {

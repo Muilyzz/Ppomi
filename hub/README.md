@@ -1,6 +1,6 @@
 # ppomi-hub
 
-뽀미 발자국(앱별 절차의 한 걸음) 공유 허브. Vercel 서버리스 + KV. Node 24, 의존성은 `@vercel/kv` 하나.
+뽀미 플레이북 카탈로그와 발자국(앱별 절차의 한 걸음) 공유 허브. Vercel 서버리스 + KV. Node 24, 의존성은 `@vercel/kv` 하나.
 
 랜딩(`index.html`, `privacy.html`, 아이콘·소셜 이미지)도 여기 산다 — Vercel 배포 루트 하나가 https://ppomi.vercel.app 정적 페이지와 `/api/*` 를 같이 낸다(`cleanUrls` 로 `/privacy`).
 
@@ -8,12 +8,22 @@
 
 | 메서드 | 경로 | 역할 |
 |---|---|---|
+| GET | `/api/playbooks` | 공식 카탈로그. `{schemaVersion:1, playbooks:[{manifest,guide,commonGuide,assets}]}`. 앱 UI와 MCP가 사용하는 원본 패키지에서 생성 |
+| GET | `/api/playbooks?id=` | 안정 ID·앱 이름·별칭으로 하나 조회. 같은 `{manifest,guide,commonGuide,assets}`. 없으면 `404` |
 | POST | `/api/footprints` | 발자국 게시. 검사 통과 → 저장, `201 {id}`. 중복 id `409`, 분당 10건 초과 `429` |
 | GET | `/api/footprints?app=&since=&tier=` | 목록. 격리 제외, verified 등급 먼저, `verified.ok` 내림차순, 최대 200 |
 | POST | `/api/verify` | `{id, ok, publisher, appVersion?, step?}` → 검증 카운터 갱신. 같은 publisher 는 하루 1회만 반영(`counted:false`) |
 | POST | `/api/report` | `{id, reason}` → 신고 수 +1, 1 이상이면 `quarantined:true` |
 | GET | `/api/export?app=` | 그 앱의 발자국을 `data/playbooks/<앱>.md` 형식 텍스트로 (`# 앱` / `콤보: …` / `- 날짜 버릇`) |
 | POST | `/api/telemetry` | 앱 텔레메트리(옵트인). `{ts, event, fields}` — `fields` 키는 `name tool ok ms app step reason` 안에서만, 값은 40자 이하 문자열·bool·숫자. `tm:<event>:<name|tool>:<ok|fail>` 카운터 +1 후 `204`. 앱 기본 주소가 이 경로다(`PPOMI_TELEMETRY_URL` 로 바꿈) |
+
+## 플레이북 카탈로그
+
+원본은 `Ppomi/Sources/Ppomi/Catalog/<id>/`의 `manifest.json`, 안내 Markdown, 공식 아이콘이다. 공통 안전 절차는 같은 카탈로그의 `common.md`에 있다. [패키지 명세](../docs/playbook-format.md)에 데이터 구조와 로컬 가져오기 방법을 설명한다.
+
+`npm run sync:catalog`는 이 원본을 검증한 뒤 `hub/catalog/`에 참조된 파일만 바이트 그대로 복사한다. 이 디렉터리는 생성물이라 gitignore이며 직접 수정하지 않는다. `npm run deploy`가 복사를 먼저 실행하므로 배포용 별도 앱 목록을 관리할 필요가 없다. 잘못된 버전, 경로 이동, 심볼릭 링크, 겹치는 앱 별칭은 배포 전에 거부한다. Vercel 함수에는 `catalog/**`를 포함하고, 같은 파일을 `/catalog/<id>/…` 정적 경로로 제공한다. API의 `assets`가 이 상대 URL을 알려 준다.
+
+카탈로그 API는 읽기 전용이다. 공개 카탈로그는 검토한 원본만 배포하며, 로컬에서 가져온 패키지를 자동 게시하지 않는다. 실제 실행 성공·실패, 화면 지문, 개인별 입력은 이 응답에 섞지 않는다. 기존 `/api/footprints`의 명시적인 공유·검증 흐름은 별도로 유지한다.
 
 ## 발자국 레코드
 
@@ -50,7 +60,8 @@
 
 ```
 npm install && npm test        # node --test
-vercel --prod                   # hub/ 에서. 기존 프로젝트 "ppomi" 에 배포 (환경변수: KV_REST_API_URL, KV_REST_API_TOKEN, 선택 VERIFIED_PUBLISHERS)
+npm run sync:catalog           # 개발용 정적 카탈로그 생성
+npm run deploy                 # 원본 검증·복사 후 기존 ppomi 프로젝트 / muilyzz 팀에 배포
 ```
 
-배포는 `hub/` 에서 `vercel --prod` 로만 한다 — 프로젝트 `ppomi` 의 git 자동 배포는 끊어 두었다. `.vercelignore` 가 `test`, `README.md`, `node_modules`, `.env.local` 을 뺀다.
+배포는 `hub/`에서 `npm run deploy`로 한다 — 프로젝트 `ppomi`의 git 자동 배포는 끊어 두었다. 환경변수는 `KV_REST_API_URL`, `KV_REST_API_TOKEN`, 선택적으로 `VERIFIED_PUBLISHERS`다. `.vercelignore`는 `test`, `README.md`, `node_modules`, `.env.local`을 빼며 생성한 `catalog/`는 업로드한다.

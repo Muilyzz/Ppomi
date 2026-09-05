@@ -105,15 +105,32 @@ final class MCPServer {
         Tools.T("transactions", "최근 days 일의 거래(ts, amount, merchant, card, kind, uid, status) JSON 배열, 최신순 최대 300행.", ["days": ("integer", "기본 30")]),
         Tools.T("sql", "장부(SQLite)에 읽기 전용 SQL. SELECT/WITH 만. 결과 {columns, rows}, 200행 상한. 테이블: transactions, snapshots, holdings, state, later, facts.",
                 ["query": ("string", nil)], ["query"]),
-        Tools.T("read_playbook", "앱별 절차(콤보와 버릇). 폰 앱 작업 전에 읽어라. app 을 비우면 전부.", ["app": ("string", "앱 이름")]),
+        Tools.T("list_playbooks", "현재 사용 가능한 플레이북. 키오스크와 같은 앱 ID·아이콘·작업 명세·버전과 실제 재생 검증 기록을 반환한다.", [:]),
+        Tools.T("read_playbook", "플레이북의 구조화 명세·상세 절차·실제 재생 검증 기록. 폰 앱 작업 전에 읽어라. app 을 비우면 전부.", ["app": ("string", "플레이북 ID 또는 앱 이름")]),
         Tools.T("note_footprint", "실행 중 새로 알게 된 앱의 버릇 한 줄. 금액·이름·예약번호 같은 개인정보 금지. glyph 를 주면 마지막으로 읽은 화면의 걸음으로도 남긴다(run_combo 가 그 화면에서 멈춰 두뇌에 넘긴다).",
                 ["app": ("string", nil), "line": ("string", nil), "glyph": ("string", "선택: 이 화면의 걸음 기호(⊙ ⌨ ↓ ⎋ 👤 🎟 🔍 ✋ 📝)"), "target": ("string", "선택: 탭할 글자 정규식·입력할 글자")], ["app", "line"]),
     ]
 
     private var instructions: String {
         (Playbooks.all().first { $0.app == "공통" }?.text ?? "") +
-            "\n폰 앱 작업 전에 read_playbook(앱) 을 읽고, 새 버릇은 note_footprint 로 남겨라. 결제·구매 버튼은 confirm_payment 승인 뒤에만 phone_tap 된다(코드가 막는다)." +
+            "\nlist_playbooks 로 앱 ID와 가능한 작업을 확인하고, 폰 앱 작업 전에 read_playbook(앱 ID) 을 읽어라. 새 버릇은 note_footprint 로 남겨라. 결제·구매 버튼은 confirm_payment 승인 뒤에만 phone_tap 된다(코드가 막는다)." +
             "\n폰 앱 작업은 run_combo 먼저, 멈춘 화면부터 phone_screen/phone_tap."
+    }
+
+    /// Encode the catalog's actual types so new fields reach MCP without another presentation mapping.
+    private func playbookInfo(_ record: PlaybookRecord, includeGuide: Bool) -> [String: Any] {
+        let encoder = JSONEncoder()
+        func object<T: Encodable>(_ value: T) -> Any {
+            guard let data = try? encoder.encode(value), let result = try? JSONSerialization.jsonObject(with: data) else { return NSNull() }
+            return result
+        }
+        let keys = [record.id, record.name] + record.manifest.aliases
+        let installed = keys.lazy.compactMap { try? self.db.state("installed:\($0)") }.first
+        var result: [String: Any] = ["manifest": object(record.manifest),
+                                     "evidence": object(Playbooks.evidence(record, in: tools.footprintDir))]
+        if let installed { result["installed"] = installed == "1" } else { result["installed"] = NSNull() }
+        if includeGuide { result["guide"] = record.guideText }
+        return result
     }
 
     private func call(_ name: String, _ a: [String: Any]) -> [String: Any] {
@@ -144,17 +161,28 @@ final class MCPServer {
             guard Re(#"^\s*(?i:SELECT|WITH)\b[^;]*;?\s*$"#).match(str("query")) != nil else { return text("read-only: one SELECT/WITH statement only", error: true) }
             do { let t = try ro.table(str("query"), limit: 200); return text(json(["columns": t.cols, "rows": t.rows.map { $0.map { $0 ?? NSNull() } }])) }
             catch { return text("sql error: \(error)", error: true) }
+        case "list_playbooks":
+            let payload: [String: Any] = ["playbooks": PlaybookCatalog.load(in: Playbooks.dir, includeBundled: true).map { playbookInfo($0, includeGuide: false) }]
+            return ["content": [["type": "text", "text": json(payload)]], "structuredContent": payload]
         case "read_playbook":
-            let ps = Playbooks.all().filter { str("app").isEmpty || $0.app == str("app") }
-            let fps = (str("app").isEmpty ? ps.map(\.app) : [str("app")]).flatMap { FootprintStore.load($0, in: tools.footprintDir) }
-            return text((ps.isEmpty ? "절차 없음: \(str("app"))" : ps.map { "## \($0.app)\n\($0.text)" }.joined(separator: "\n"))
-                        + "\n구조화 발자국 \(fps.count)개(검증 ok 합계 \(fps.map(\.verified.ok).reduce(0, +)))")
+            let query = str("app")
+            let catalog = query.isEmpty ? PlaybookCatalog.load(in: Playbooks.dir, includeBundled: true)
+                : PlaybookCatalog.resolve(query, in: Playbooks.dir).map { [$0] } ?? []
+            var payload: [String: Any] = ["playbooks": catalog.map { playbookInfo($0, includeGuide: true) }, "common": PlaybookCatalog.common(in: Playbooks.dir)]
+            if !query.isEmpty, catalog.isEmpty {
+                let legacy = Playbooks.all().filter { $0.app == query }
+                guard !legacy.isEmpty else { return text("절차 없음: \(query)", error: true) }
+                payload["legacyGuides"] = legacy.map { ["name": $0.app, "guide": $0.text] }
+            }
+            return ["content": [["type": "text", "text": json(payload)]], "structuredContent": payload]
         case "note_footprint":
             guard !str("app").isEmpty, !str("line").isEmpty else { return text("app 과 line 이 필요하다.", error: true) }
             do { try Playbooks.append(str("app"), str("line")) } catch { return text("못 적었다: \(error)", error: true) }
             if !str("glyph").isEmpty {                                    // a structured step too, keyed on the last screen the brain read
-                let fp = Footprint(app: str("app"), glyph: str("glyph"), target: str("target"), fingerprintBefore: Fingerprint.words(from: tools.lastWords), fingerprintAfter: [], note: str("line"), source: "manual")
-                try? FootprintStore.append(str("app"), fp, in: tools.footprintDir)
+                let appID = PlaybookCatalog.resolve(str("app"), in: Playbooks.dir)?.id ?? str("app")
+                let fp = Footprint(app: appID, glyph: str("glyph"), target: str("target"), fingerprintBefore: Fingerprint.words(from: tools.lastWords), fingerprintAfter: [], note: str("line"), source: "manual")
+                do { try FootprintStore.append(appID, fp, in: tools.footprintDir) }
+                catch { return text("문서에는 적었지만 발자국을 저장하지 못했다: \(error)", error: true) }
             }
             return text("절차에 적었다: \(str("app"))")
         default:
