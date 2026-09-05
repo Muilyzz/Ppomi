@@ -12,6 +12,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var zoomMonitor: Any?
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // Settings can be visible while the controller's panel is closed. Always reveal the workbench outside kiosk;
+        // revealing in kiosk would move its shared view back into the window and leave the kiosk band empty.
+        if let state = state ?? Self.pendingState, !state.kioskOn { state.reveal() }
+        return false                                    // the controller owns reopening; AppKit must not open another window
+    }
+
     func applicationDidFinishLaunching(_ note: Notification) {
         state = Self.pendingState
         NSApp.setActivationPolicy(.regular)
@@ -123,5 +130,4 @@ private struct MenuContent: View {
     /// Pick a tab; bring the window up unless the kiosk band already shows it.
     private func show(_ t: AppState.Tab) { state.show(t); if !state.kioskOn { state.reveal() } }
 }
-
 
