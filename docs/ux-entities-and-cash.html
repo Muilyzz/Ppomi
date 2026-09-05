@@ -1,0 +1,243 @@
+<meta charset="utf-8"><title>실체 트리와 현금</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#eef1f0; --card:#f8faf9; --ink:#101614; --ink-2:#4a5450; --line:#cfd6d3;
+  --accent:#0f7b6c; --accent-ink:#0b5c51; --ask:#c98a00; --ask-bg:#fff4dc; --ok-bg:#e3f1ee; --corp:#5b6fd6; --corp-bg:#e8ebfa; --warn:#b33a3a; --warn-bg:#fbe9e9;
+  --phone:#1c1f1e; --phone-bubble:#2b302e; --phone-ink:#eef1f0; --phone-me:#0f7b6c;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#121615; --card:#1a201e; --ink:#e6ebe9; --ink-2:#a4ada9; --line:#2d3532;
+  --accent:#3fbfa9; --accent-ink:#7fd6c7; --ask:#e0a83a; --ask-bg:#2a2412; --ok-bg:#12302b; --corp:#8b9bf0; --corp-bg:#1c2140; --warn:#e07a7a; --warn-bg:#3a1c1c;
+  --phone:#0b0d0c; --phone-bubble:#202523; --phone-ink:#eef1f0; --phone-me:#1f8f7c;
+}}
+:root[data-theme="dark"]{
+  --paper:#121615; --card:#1a201e; --ink:#e6ebe9; --ink-2:#a4ada9; --line:#2d3532;
+  --accent:#3fbfa9; --accent-ink:#7fd6c7; --ask:#e0a83a; --ask-bg:#2a2412; --ok-bg:#12302b; --corp:#8b9bf0; --corp-bg:#1c2140; --warn:#e07a7a; --warn-bg:#3a1c1c;
+  --phone:#0b0d0c; --phone-bubble:#202523; --phone-ink:#eef1f0; --phone-me:#1f8f7c;
+}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 "IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+h1{font:700 40px/1.15 "Gowun Batang",serif;margin:0 0 6px;text-wrap:balance}
+h2{font:700 24px/1.3 "Gowun Batang",serif;margin:56px 0 14px;text-wrap:balance}
+h3{font:600 15px/1.4 "IBM Plex Sans KR",sans-serif;margin:22px 0 8px}
+p{max-width:66ch;margin:0 0 12px}
+.lede{font-size:17px;color:var(--ink-2);max-width:62ch}
+.eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:10px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--ink-2);font-size:13px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+.rules div{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.rules b{display:block;font-size:15px;margin-bottom:4px}
+.rules span{color:var(--ink-2);font-size:14px}
+.tree{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 20px;font-family:"IBM Plex Mono",monospace;font-size:13.5px;line-height:1.9;overflow-x:auto}
+.tree .g{font-weight:600}
+.tree .ent{color:var(--corp);font-weight:600}
+.tree .cash{color:var(--ask)}
+.tree .dim{color:var(--ink-2)}
+.tag{display:inline-block;font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;padding:4px 7px;border-radius:3px;background:var(--ok-bg);color:var(--accent-ink);margin-right:6px;vertical-align:1px}
+.tag.ask{background:var(--ask-bg);color:var(--ask)}
+.tag.corp{background:var(--corp-bg);color:var(--corp)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.callout{border-left:3px solid var(--accent);background:var(--card);padding:12px 16px;margin:14px 0;max-width:70ch}
+.callout.ask{border-color:var(--ask)}
+.callout.corp{border-color:var(--corp)}
+.callout.warn{border-color:var(--warn)}
+.phones{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0}
+.phone{width:280px;background:var(--phone);border-radius:22px;padding:18px 14px 16px;color:var(--phone-ink);font-size:13.5px;line-height:1.5;box-sizing:border-box}
+.phone .who{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;color:#9aa5a0;margin-bottom:10px}
+.bubble{background:var(--phone-bubble);border-radius:14px 14px 14px 4px;padding:9px 12px;margin:0 22px 8px 0;white-space:pre-line}
+.bubble.me{background:var(--phone-me);border-radius:14px 14px 4px 14px;margin:0 0 8px 22px;color:#fff}
+.keys{display:flex;flex-wrap:wrap;gap:6px;margin:4px 22px 10px 0}
+.keys span{background:#3a413e;border:1px solid #4d5551;border-radius:8px;padding:5px 9px;font-size:12.5px}
+.keys span.pick{background:var(--phone-me);border-color:var(--phone-me);color:#fff}
+.phone .cap{color:#9aa5a0;font-size:11.5px;margin-top:6px}
+.spoiler{background:#555c59;color:transparent;border-radius:3px}
+.board{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px 26px;max-width:520px;font-size:22px;line-height:1.5}
+.board .q{font-size:16px;margin-top:14px;color:var(--ink-2)}
+.board .keys span{background:var(--paper);border-color:var(--line);color:var(--ink)}
+.small{font-size:13px;color:var(--ink-2)}
+ol.plan{padding-left:20px;max-width:70ch} ol.plan li{margin:6px 0}
+ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:3px 0}
+@media (prefers-reduced-motion:no-preference){.bubble{animation:in .3s ease-out both}@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+<main>
+<div class="eyebrow">AssetManager · UX 설계 메모 2 · 2026-09-03 · 2판 (회계·사용자 검토 반영)</div>
+<h1>실체 트리와 현금</h1>
+<p class="lede">개인, 개인사업자, 법인은 다른 제품이 아니라 같은 나무의 다른 가지입니다. 다만 나무에는 세 종류의 마디가 있고, 그 셋을 한 낱말로 뭉개면 세무가 틀립니다. 현금은 은행이 세어 주지 않으니 사람이 세는 것이 관측이고, 셈이 예상과 다르면 부족이든 초과든 똑같이 "현금과부족"입니다. 이 두 가지가 1판에서 고친 것입니다.</p>
+
+<h2>세 낱말</h2>
+<table>
+  <tr><th>낱말</th><th>뜻</th><th>예</th><th>규칙</th></tr>
+  <tr><td><b>계좌</b></td><td>관측의 단위. 은행 앱이 보여 주는 잔액, 또는 사람이 센 현금</td><td>KB국민ONE통장, 지갑 · 아빠</td><td>계좌 하나만 골라 보는 것은 계정별 원장이다. 그때 밖으로 나간 돈의 라벨은 "지출"이 아니라 <b>"이 계좌에서 나감"</b></td></tr>
+  <tr><td><b>폴더</b></td><td>렌즈. 용도로 묶어 보는 것. 세무와 무관</td><td>생활, 미래, AI 실험</td><td>이름이 있는 한 남는다. 계좌가 하나면 "폴더 · 계좌" 한 줄로 접어 보일 뿐이다. 빈 폴더만 없다</td></tr>
+  <tr><td><b>실체</b></td><td>세무의 경계. 유형이 개인·개인사업자·법인인 마디. 자산 = 부채 + 자본이 닫히는 단위</td><td>나, 사업(개인사업자), ○○ 주식회사</td><td>다른 색·아이콘. 계좌가 0개여도 남는다(거래의 "귀속"으로 채워진다). 경계를 건너는 돈에는 이름이 붙는다</td></tr>
+</table>
+<p class="small">1판은 이 셋을 "실체"로 불렀습니다. 그래서 "계좌 하나가 실체"라는 문장이 나왔고, 그 문장이 세무 경계를 지웠습니다. 계좌 하나는 계정이고, 실체는 납세자입니다.</p>
+
+<h2>나무의 규칙</h2>
+<div class="rules">
+  <div><b>계좌 하나로도 본다</b><span>고르면 그 계좌만의 원장이 나온다. 세무 경계는 아니다.</span></div>
+  <div><b>폴더는 이름이 있는 한 남는다</b><span>하나 남으면 접어서 한 줄로 보여 준다. 상태가 바뀌지 않으니 놀랄 일이 없다.</span></div>
+  <div><b>폴더는 폴더 안에 들어간다</b><span>AI 실험 ⊂ 나 ⊂ 전부. 안쪽에서 이체였던 선이 바깥에서 사라진다.</span></div>
+  <div><b>맨 바깥은 "전부"</b><span>이름은 <b>내가 통제하는 돈(세전)</b>. 연결재무제표가 아니다. 법인은 지분율 필드(기본 100%)만큼만 순자산에 들어가고, 꺼낼 때의 세금은 시나리오에서 따로 센다.</span></div>
+  <div><b>다른 납세자는 형제, 같은 납세자의 사업은 자식</b><span>법인과 다른 가족은 "나" 옆. 개인사업자는 "나" 안. 그러나 <b>둘 다 실체 경계</b>다. 안에 있어도 경계를 건너면 이름이 붙는다.</span></div>
+  <div><b>분류는 읽을 때, 그 시점의 나무로</b><span>저장은 양끝 계좌뿐. 나무를 바꾸면 과거도 새 나무로 다시 읽힌다. 태그를 저장하면 옛 태그가 남는다.</span></div>
+</div>
+
+<h3>한 집의 나무</h3>
+<div class="tree">
+<span class="g">전부</span> <span class="dim">— 내가 통제하는 돈(세전)</span>
+├─ <span class="ent">나</span> <span class="dim">(개인)</span>
+│  ├─ <span class="g">생활</span>
+│  │  ├─ KB국민ONE통장
+│  │  ├─ 케이뱅크 MY 입출금통장 <span class="dim">· 사람: 아내</span>
+│  │  ├─ <span class="cash">지갑 · 나</span> <span class="dim">— KRW, 세어서 관측, 허용오차 1,000원</span>
+│  │  └─ <span class="cash">지갑 · 아내</span>
+│  ├─ <span class="g">AI 실험 · 카카오뱅크 AI 통장</span> <span class="dim">— 계좌 하나라 한 줄로 접힘</span>
+│  ├─ <span class="g">미래</span>
+│  │  ├─ 직장인우대적금
+│  │  ├─ 토스증권
+│  │  ├─ <span class="cash">집 금고 · KRW</span> <span class="dim">— 묻는 사람: 나, 분기</span>
+│  │  └─ <span class="cash">집 금고 · USD</span> <span class="dim">— 통화당 계좌 하나</span>
+│  └─ <span class="ent">사업</span> <span class="dim">(개인사업자) — "나" 안이지만 실체 경계. 계좌가 없어도 남는다</span>
+│     ├─ 사업자 입출금통장
+│     └─ <span class="cash">시재 · 가게</span> <span class="dim">— 매일 마감, 허용오차 0</span>
+└─ <span class="ent">○○ 주식회사</span> <span class="dim">(법인, 지분 100%) — 다른 납세자라 "나" 옆</span>
+   ├─ 기업뱅킹 법인계좌
+   ├─ 법인카드 <span class="dim">— 부채</span>
+   └─ <span class="cash">소액현금</span> <span class="dim">— 월 마감, 허용오차 0, 현금출납장</span>
+</div>
+<p class="small">부부는 생활에서는 한 집입니다. 배우자의 계좌는 "나" 안에 있고 사람 속성만 다릅니다. 생활비 이체는 이체입니다. 증여·상속 시나리오를 돌릴 때만 배우자를 별도 납세자로 승격하는 렌즈를 켭니다. 배우자 간에도 증여 공제와 합산 규칙이 있어서, 그때는 다른 납세자가 맞습니다.</p>
+
+<h2>세 유형, 한 화면 틀</h2>
+<p>화면의 틀은 셋 다 같습니다. 나무에서 마디를 고르면 타임라인, 자산 현황, 증빙이 그 마디 기준으로 바뀝니다. 다른 것은 데이터가 들어오는 길, 사람 손동작, 그리고 <b>질문의 보기</b>입니다.</p>
+<table>
+  <tr><th>유형</th><th>자리</th><th>데이터 경로</th><th>사람 손동작</th><th>질문의 보기</th><th>은행 밖 문서</th></tr>
+  <tr><td>개인</td><td>"나"와 그 안의 용도 폴더</td><td>개인 은행 앱을 미러링으로 읽음</td><td>로그인 벽에서 Face ID나 PIN. 사람이 폰에서 직접 친다</td><td>역량·시간·즐거움·유지·관계·건강</td><td>없음</td></tr>
+  <tr><td>개인사업자</td><td>"나" 안의 "사업" 실체</td><td>사업자 계좌가 같은 은행 앱에 있으면 같은 경로. 기업뱅킹 앱이면 그 앱을 미러링</td><td>같음. 인증서 비밀번호도 사람이 친다. 뽀미는 저장하지 않는다</td><td>계정과목: 복리후생·소모품·여비교통·접대·통신·지급수수료·차량·기타, 그리고 <b>개인 용도</b></td><td>홈택스 세금계산서·현금영수증. 부가세 신고 대상 거래가 생기는 즉시 필요</td></tr>
+  <tr><td>법인</td><td>뿌리 바로 아래, "나"의 형제</td><td>기업뱅킹 앱 미러링</td><td>법인 인증서 비밀번호 한 번. 조회라 OTP는 안 걸림</td><td>위와 같은 계정과목, 그리고 <b>개인 용도</b></td><td>세금계산서, 법인카드 청구, 급여대장</td></tr>
+</table>
+<div class="callout">사업·법인 마디의 표 제목은 "재무상태표"가 아니라 <b>현금 기준 자산 현황</b>입니다. 관측이 현금주의라 매출채권, 미지급 카드대금, 미납 세금이 없습니다. 발생주의 항목은 홈택스·카드사 데이터가 붙는 단계에서 들어오고, 그전까지는 제목이 그 한계를 말합니다.</div>
+
+<h2>주머니 사이를 건너는 돈</h2>
+<p>실체 경계를 건너는 선은 그냥 이체가 아닙니다. 규칙은 하나입니다. <b>양끝의 가장 가까운 실체 조상이 다르면 이름이 붙는다.</b> 최상위 마디가 아니라 가장 가까운 실체입니다. 그래야 "나" 안에 있는 "사업"과 생활 통장 사이의 이동이 잡힙니다. 사장님에게 가장 중요한 선이 바로 이것입니다.</p>
+<table>
+  <tr><th>경계</th><th>이름 (닫힌 목록)</th><th>성격</th><th>잔액</th></tr>
+  <tr><td>법인 → 나</td><td>급여·상여·퇴직금 / 배당 / 경비정산 / <b>가지급금</b> / 가수금상환</td><td>급여는 법인 비용이자 내 소득. 배당은 법인의 자본 감소이지 비용이 아니다. 경비정산은 내가 대신 낸 회사 돈을 돌려받는 것</td><td>가지급금은 법인의 자산이자 내 부채로 잔액이 남는다</td></tr>
+  <tr><td>나 → 법인</td><td>출자 / 가수금 / 가지급금상환 / 경비대납</td><td>출자는 법인의 자본. 가수금은 내가 법인에 빌려준 돈</td><td>가수금은 법인의 부채이자 내 자산</td></tr>
+  <tr><td>사업(개인사업자) ↔ 나</td><td>인출 / 출자</td><td>같은 사람이라 세금이 붙는 흐름이 아니다. 그러나 사업소득 계산의 경계라 이름은 붙는다. 가사 관련 지출은 사업 필요경비가 아니다</td><td>없음</td></tr>
+  <tr><td>가족 ↔ 가족 (승격했을 때)</td><td>증여 / 대여 / 상환 / 생활비</td><td>대여는 이자와 상환 조건이 있어야 대여다</td><td>대여는 잔액이 남는다</td></tr>
+  <tr><td>법인 ↔ 법인</td><td>이름 강제</td><td>특수관계자 거래. 가격과 방향이 문제된다</td><td><span class="tag warn">세무사 확인</span></td></tr>
+</table>
+<ul class="tight small">
+  <li><b>방향과 잔액.</b> 선은 (어디서, 어디로, 이름, 금액, 날짜)로 저장하고, 실체 쌍마다 연간 합계와 연말 잔액을 냅니다. 가지급금 − 상환 − 가수금 + 가수금상환의 잔액이 법인 쪽에는 "대표자 가지급금(자산)", 내 쪽에는 "법인에 대한 채무"로 나타나고 "전부"에서는 상쇄됩니다. 연말 가지급금 잔액은 세무에서 가장 먼저 보는 숫자입니다.</li>
+  <li><b>"대표자 인출"은 법인에 없습니다.</b> 근거 없이 법인 돈이 나에게 오면 기본값이 가지급금이고, 화면에 "근거가 있으면 급여·배당·상환·경비정산으로 바꾸세요"가 붙습니다. 인출이 정상 이름인 곳은 개인사업자뿐입니다.</li>
+  <li><b>급여는 실수령액만 상쇄됩니다.</b> 원천세와 4대보험 공제분은 법인에서 세무서·공단으로 나가는 별도 지출이라 "전부"에서도 남습니다. 급여 선에는 총액과 공제액을 붙일 수 있고, 공제 지출 선은 자동 생성합니다.</li>
+  <li><b>한쪽 끝이 나무 밖인 선.</b> 법인카드로 낸 개인 저녁값, 법인계좌에서 낸 개인 보험료, 내 카드로 낸 회사 경비. 양끝만 보면 그냥 지출입니다. 그래서 선에 <b>귀속</b> 속성을 둡니다. 계좌의 실체와 귀속 실체가 다르면 경계를 건넌 것으로 읽습니다(가지급금 또는 경비대납). 입력은 질문 버튼 하나, "개인 용도" 또는 "회사 용도"입니다.</li>
+</ul>
+
+<h2>현금과 금고</h2>
+<p>은행 계좌의 관측은 앱이 보여 주는 잔액입니다. 현금에는 그런 것이 없으니, <b>사람이 세어서 말하는 것이 관측</b>입니다. 지난번 센 값에 그동안의 입출을 더하면 지금 있어야 할 금액이 나오고, 센 값과의 차이가 <b>현금과부족</b>입니다. 부족이든 초과든 같은 것이고, 은행 계좌의 미관측과 같은 자리에 같은 색으로 나타납니다.</p>
+<table>
+  <tr><th>현금 계좌</th><th>사람 · 통화</th><th>세는 주기</th><th>초과분 기본값</th><th>부족분 기본값</th><th>증빙</th></tr>
+  <tr><td>지갑</td><td>사람마다 하나 · KRW</td><td>월 1회, 그 사람 채팅으로</td><td>받은 돈</td><td>생활비(현금)</td><td>센 말 자체(시각, 누가). 사진은 선택</td></tr>
+  <tr><td>집 금고</td><td>묻는 사람 한 명 지정 · 통화당 하나</td><td>분기 1회</td><td>받은 돈</td><td>지갑으로 이동 여부를 먼저 묻고, 아니면 생활비</td><td>사진 권장</td></tr>
+  <tr><td>시재 · 가게</td><td>사장님 · KRW</td><td><b>매일 마감</b>, 문 닫을 때</td><td><b>현금 매출</b>. 현금영수증 발행 여부를 한 번 더 묻는다</td><td>소액 지출</td><td>매입: 영수증 사진. 매출: 홈택스 발행 기록(사진 불요)</td></tr>
+  <tr><td>법인 소액현금</td><td>대표 · KRW</td><td>월 마감</td><td>잘못 셈 또는 회수</td><td>경비. 영수증과 대조</td><td>영수증 사진 필수, 적격증빙 여부는 따로 표시. 원본은 버리지 않는다</td></tr>
+</table>
+<ul class="tight small">
+  <li><b>은행 사슬이 없으면 기대값을 만들지 않습니다.</b> 인출이 관측되지 않는 폰이면 "지난번 12만원이었고 지금 8만3천원이면 4만1천원 줄었네요"까지만 말하고 차이를 묻지 않습니다.</li>
+  <li><b>허용오차.</b> 계좌마다 두고, 기본 1,000원, 시재와 소액현금은 0원. 그 이하 차이는 묻지 않고 현금과부족에 조용히 쌓습니다. 동전 때문에 매달 몇백 원짜리 질문이 생기지 않게.</li>
+  <li><b>"기억 안 나요"는 선이 아니라 상태입니다.</b> 현금과부족 잔액은 열린 채 남고 재질문만 멈춥니다. 개인 마디에서는 "현금 생활비(미분류)"로 보이고, 사업·법인 마디에서는 기말에 잡손실·잡이익으로 넘기되 증빙 없는 잡손실은 손금 인정이 어려울 수 있다는 한 줄이 붙습니다. 그래서 현금 계좌의 미관측이 은행 계좌처럼 열린 질문으로 남고, "장부가 닫힘"이 억지로 참이 되지 않습니다.</li>
+  <li><b>묻는 시점.</b> 셈 때가 아니라 기억이 있을 때. ATM 인출 직후 "30만원 뭐 하려고?"를 한 번, 인출 1주 뒤 세어 보기를 한 번. 이 둘이 "기억 안 나요"의 비율을 낮춥니다.</li>
+  <li><b>답이 없으면 3일 뒤 그냥 넘깁니다.</b> 다시 묻지 않고 배지도 안 붙입니다. 다음 달 문구만 바뀝니다. "지난달은 못 셌어요. 7/3 이후 뽑은 돈이 55만원이에요. 지금 얼마 있어요?"</li>
+  <li><b>짝짓기.</b> ATM 인출과 입금은 같은 실체 안의 현금 계좌와 짝짓습니다. 하나면 그것, 둘 이상이면 계좌 설정의 기본 현금 계좌 뒤 한 번 묻고 기억합니다. 두 현금 계좌의 차이가 반대 부호로 같은 금액이면 "지갑에서 금고로 옮기셨어요?"를 먼저 묻습니다.</li>
+  <li><b>외화.</b> 통화당 계좌 하나. 관측과 흐름은 그 통화 단위로만. 원화 환산은 관측 시점의 매매기준율로 하고 출처와 시각을 저장하며, 두 관측 사이의 환율 차이는 "외화환산손익" 선으로 자동 생성해 현금과부족에서 뺍니다. 이 두 줄이 없으면 그 계좌는 검산에서 제외합니다. 외화 계좌를 만드는 순간 같이 들어가는 것이지 "나중"이 아닙니다. 법인·사업 마디의 외화 평가 방법은 <span class="tag warn">세무사 확인</span>.</li>
+  <li><b>타임라인.</b> 현금 계좌는 관측(실선 계단)과 기대값(점선)을 함께 그립니다. 두 선의 벌어짐이 곧 현금과부족이고, 인출 직후에도 지갑이 옛 값으로 보이는 한 달이 없어집니다.</li>
+</ul>
+
+<h2>폰에서 오가는 말</h2>
+<p>사람마다 말투 설정이 있고 부모님은 존댓말이 기본입니다. 지난 잔액은 스포일러로 가립니다. 숫자만 오면 세어 보기 답으로만 받고, 지출은 "택시 만원"처럼 품목이 붙은 문장만입니다. 세어 보기 답은 반드시 되읽고 확인받습니다.</p>
+<div class="phones">
+  <div class="phone"><div class="who">세어 보기 · 월 1회 · 그 사람에게만</div>
+    <div class="bubble">💵 이번 달 지갑 세어 보실래요? 지난번 8/3엔 <span class="spoiler">124,000원</span>이었고, 그 뒤 ATM에서 30만원 뽑으셨어요.</div>
+    <div class="bubble me">8만3천</div>
+    <div class="bubble">지갑에 <b>팔만 삼천 원</b>, 맞아요?</div>
+    <div class="keys"><span class="pick">맞아요</span><span>아니요</span></div>
+    <div class="bubble">적었어요. 한 달 동안 현금으로 <b>341,000원</b> 쓰셨네요. 대충 어디에 쓰셨어요?</div>
+    <div class="keys"><span>생활비</span><span>식비</span><span>경조사</span><span class="pick">기억 안 나요</span></div>
+    <div class="cap">"비어요·적네요·모름"은 쓰지 않는다. 한글 숫자를 읽고, 지난번과 자릿수가 다르면 한 번 더 묻는다.</div></div>
+  <div class="phone"><div class="who">늘었을 때</div>
+    <div class="bubble">적었어요. 지난번보다 <b>50,000원</b> 늘었네요. 어디서 받으셨어요?</div>
+    <div class="keys"><span class="pick">용돈</span><span>환불</span><span>기타</span></div>
+    <div class="cap">초과분도 같은 질문. 기본값은 "받은 돈".</div></div>
+  <div class="phone"><div class="who">가게 시재 · 매일 마감</div>
+    <div class="bubble">🏪 오늘 마감 시재 얼마예요? 어제 마감 <span class="spoiler">312,000원</span>.</div>
+    <div class="bubble me">540000</div>
+    <div class="bubble">오늘 현금 매출 <b>228,000원</b>으로 적을게요. 현금영수증 끊은 건 있어요?</div>
+    <div class="keys"><span>전부</span><span class="pick">일부 …원</span><span>없음</span></div>
+    <div class="cap">늘어나는 게 정상인 계좌. 은행에서 뽑아 온 잔돈은 사슬에서 자동 이체라 입력이 없다.</div></div>
+  <div class="phone"><div class="who">현금 지출 · 그때그때</div>
+    <div class="bubble me">택시 만원</div>
+    <div class="bubble">택시 10,000원, 지갑에서 적었어요. 오늘 현금 1건.</div>
+    <div class="cap">"지갑에서"를 안 붙여도 현금으로 받는다. 카드는 은행에서 오니까.</div></div>
+  <div class="phone"><div class="who">법인 소액현금 · 월 마감</div>
+    <div class="bubble">🧾 소액현금 이번 달 마감이에요. 지난달 잔액 <span class="spoiler">212,000원</span>, 이달 법인계좌에서 100,000원 채웠어요. 영수증을 한 장씩 보내 주세요. 파일로 보내면 더 잘 읽어요.</div>
+    <div class="bubble me">[사진]</div>
+    <div class="bubble">9/2 김밥천국 12,000원, 맞아요?</div>
+    <div class="bubble me">[사진] [사진] 148000</div>
+    <div class="bubble">3장 받았어요. 나간 돈 164,000원 중 적격 45,000원, 간이 3만원 이하 12,000원, <b>간이 3만원 초과 4,500원(증빙 미비)</b>, 증빙 없음 102,500원. 3만원 넘는 건 현금영수증을 받아 두세요.</div>
+    <div class="cap">사진은 증빙의 사본이지 자격이 아니다. 등급을 붙이고, 원본은 버리지 말라고 말한다.</div></div>
+</div>
+<div class="callout ask">질문은 사람마다 하루 하나입니다. 세어 보기와 지출 질문이 겹치면 세어 보기가 먼저이고 지출 질문은 다음 날입니다. 수집 중에는 큐에 쌓았다가 마무리에 보냅니다. 첫 메모의 규칙과 같습니다.</div>
+
+<h2>법인 소액현금의 마감 산출물</h2>
+<p>사진 묶음이 아니라 <b>현금출납장</b>입니다. 일자, 적요, 금액, 잔액, 증빙 등급, 사진 파일명이 한 줄씩 있는 CSV와 사진 폴더를 세무사에게 그대로 넘깁니다. 접대비 계정에 3만원 초과 간이영수증이 있으면 "손금불산입 위험"으로 표시합니다.</p>
+<div class="callout warn"><span class="tag warn">세무사 확인</span> 이 메모가 숫자로 적은 기준은 검토자가 "알고 있다"고 한 수준이지 법령을 대조한 것이 아닙니다. 간이영수증 인정 한도 3만원, 증빙불비가산세 2%, 접대비 손금불산입 기준, 장부·증빙 보관 5년, 사진의 원본 대체 가능 여부, 가지급금 인정이자율, 현금영수증 의무발행 10만원. 코드에 넣기 전에 각각 법령 연도와 함께 확인합니다.</div>
+
+<h2>두 개의 맥</h2>
+<h3>개발자 맥은 작업대</h3>
+<p>세 칸입니다. 왼쪽에 나무, 가운데에 고른 마디의 타임라인과 자산 현황, 오른쪽에 그 마디의 증빙. 나무에서 계좌를 폴더로 끌어 넣는 것이 경계를 긋는 유일한 동작이고, Finder에서 파일을 폴더에 넣는 것과 같습니다. 부모님 집의 나무도 여기서 짭니다.</p>
+<ul class="tight small">
+  <li><span class="tag">나무</span>계좌는 은행 아이콘, 현금은 지갑·금고 아이콘, 실체는 다른 색. 마디 옆에 월말 잔액과 "못 읽음/못 셈" 점.</li>
+  <li><span class="tag">타임라인</span>마디를 바꾸면 순자산선과 등식 막대가 그 마디 기준으로. 법인 마디에는 "주머니 사이" 탭이 하나 더 있어 실체 쌍·방향별 연간 합계와 연말 잔액을 표로 냅니다.</li>
+  <li><span class="tag">증빙</span>은행 계좌는 스크린샷, 현금은 센 말과 사진, 법인 API가 붙으면 응답 원문. 1단계만 다르고 나머지는 같습니다.</li>
+</ul>
+<h3>부모님 맥은 게시판</h3>
+<p>키오스크 화면에 나무, 마디, 미관측 점, 끌어 넣기는 없습니다. 큰 글씨 세 줄과 기다리는 질문 하나입니다.</p>
+<div class="board">통장 합쳐서 <span class="spoiler">1억 1,004만원</span><br><span class="small">오늘 아침 6:31에 읽음 · 케이뱅크는 못 읽었어요</span><br>지갑은 8/3에 세셨어요<div class="q">💵 이번 달 지갑 세어 보실래요?<div class="keys"><span>지금 셀게요</span><span>나중에</span></div></div></div>
+<p class="small">텔레그램과 같은 버튼이라 어느 쪽에서 답해도 같은 답입니다. 폰이 무대에 오르면 이 게시판이 옆으로 밀리고 도넛이 됩니다.</p>
+
+<h2>원칙과 부딪히는 자리</h2>
+<div class="callout warn"><b>CODEF류 스크래핑 API는 "로그인은 사람만"에 어긋납니다.</b> 인증서와 비밀번호를 맡겨 대신 로그인하는 구조라 첫 메모의 다섯째 원칙 예외입니다. 결정 전까지는 미러링만 씁니다. 예외를 둔다면 조건은 넷입니다. 조회 전용일 것, 인증서는 맥 키체인에만 있고 클라우드에 올리지 않을 것, 응답 원문을 영구 보관할 것, 사업·법인 마디에만 쓸 것. 사업·법인에 부가세 신고 대상 거래가 생기면 이 결정을 미룰 수 없습니다. 세금계산서와 현금영수증은 은행 화면에 없습니다.</div>
+
+<h2>화면 용어</h2>
+<table>
+  <tr><th>설계 용어</th><th>화면에 쓰는 말</th></tr>
+  <tr><td>실체</td><td>통장 묶음, 또는 그냥 이름(나, 사업, ○○ 주식회사)</td></tr>
+  <tr><td>마디</td><td>쓰지 않는다. 이름만</td></tr>
+  <tr><td>미관측</td><td>못 읽음(은행) / 못 셈(현금)</td></tr>
+  <tr><td>전환</td><td>쓴 것</td></tr>
+  <tr><td>현금과부족(기억 안 나요)</td><td>미분류 현금</td></tr>
+  <tr><td>실체 간</td><td>다른 주머니로 (급여, 배당, 인출, 출자, 가지급금…)</td></tr>
+</table>
+
+<h2>코드에 생기는 변화</h2>
+<table>
+  <tr><th>변경</th><th>어디</th><th>크기</th></tr>
+  <tr><td>나무 파일. 마디(이름, 종류: 폴더·실체, 실체 유형, 지분율, 자식), 계좌의 소속과 사람·통화·허용오차·기본 현금 계좌</td><td class="mono">data/entities.json → Ledger</td><td>작음</td></tr>
+  <tr><td>분류는 읽을 때, 나무를 인자로. 저장은 양끝 계좌 id와 선택 속성(귀속 실체, 이름). 가장 가까운 실체 조상이 다르면 "주머니 사이"이고 이름이 필수</td><td class="mono">Rules.classify(line, tree)</td><td>중간</td></tr>
+  <tr><td>주머니 사이 선의 방향·이름·잔액 집계. 실체 쌍마다 연간 합계와 연말 잔액. 가지급금·가수금·대여의 잔액을 양쪽 자산 현황에 표시하고 "전부"에서 상쇄</td><td class="mono">Ledger.crossBalances</td><td>중간</td></tr>
+  <tr><td>현금 계좌. 세어 본 값은 snapshots에 source "count:&lt;사람&gt;", 현금 전표는 transactions에 source "manual:&lt;대화 id&gt;". 현금과부족은 관측−기대의 열린 잔액, 허용오차 이하는 조용히 적립, 사슬 없는 계좌는 기대값 없음</td><td class="mono">am.py 스키마 · 봇 도구</td><td>중간</td></tr>
+  <tr><td>외화 계좌. 통화 단위 관측, 매매기준율 저장, 외화환산손익 자동 선. 외화 계좌 생성과 동시</td><td class="mono">Ledger.total · 환율 출처</td><td>작음</td></tr>
+  <tr><td>세어 보기 질문. 사람별 채팅, 되읽기 확인, 한글 숫자 파서, 3일 무응답 넘김, ATM 직후·1주 뒤 트리거, 하루 하나 큐</td><td class="mono">serve 스케줄 · 대화 도구</td><td>중간</td></tr>
+  <tr><td>유형별 질문 보기. 개인은 자본 여섯, 사업·법인은 계정과목 여덟과 "개인 용도"</td><td class="mono">질문 위젯</td><td>작음</td></tr>
+  <tr><td>법인 소액현금 마감. 사진 한 장씩 되읽기, 증빙 등급, 현금출납장 CSV 산출</td><td class="mono">봇 도구 · 내보내기</td><td>중간</td></tr>
+  <tr><td>세무 기준 상수 표. 법령 연도 붙여 한 파일에, 위 "세무사 확인" 목록부터</td><td class="mono">Rules.tax(연도)</td><td>작음, 확인 뒤</td></tr>
+  <tr><td>홈택스·카드사 문서 경로(CODEF류). 원칙 예외 결정 뒤, 사업·법인 마디에만</td><td class="mono">새 수집기</td><td>큼</td></tr>
+</table>
+<p class="small">부채(카드, 대출)는 이 메모의 범위 밖이지만 같은 나무에 들어갑니다. 법인카드처럼 마디 안의 부채 계좌로 놓이고, 자산 현황의 오른쪽에 나타납니다.</p>
+</main>

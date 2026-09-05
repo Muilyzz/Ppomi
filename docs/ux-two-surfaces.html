@@ -1,0 +1,212 @@
+<meta charset="utf-8"><title>뽀미 두 화면</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#eef1f0; --card:#f8faf9; --ink:#101614; --ink-2:#4a5450; --line:#cfd6d3;
+  --accent:#0f7b6c; --accent-ink:#0b5c51; --ask:#c98a00; --ask-bg:#fff4dc; --ok-bg:#e3f1ee;
+  --phone:#1c1f1e; --phone-bubble:#2b302e; --phone-ink:#eef1f0; --phone-me:#0f7b6c;
+  --mac:#dfe5e2;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#121615; --card:#1a201e; --ink:#e6ebe9; --ink-2:#a4ada9; --line:#2d3532;
+  --accent:#3fbfa9; --accent-ink:#7fd6c7; --ask:#e0a83a; --ask-bg:#2a2412; --ok-bg:#12302b;
+  --phone:#0b0d0c; --phone-bubble:#202523; --phone-ink:#eef1f0; --phone-me:#1f8f7c; --mac:#222826;
+}}
+:root[data-theme="dark"]{
+  --paper:#121615; --card:#1a201e; --ink:#e6ebe9; --ink-2:#a4ada9; --line:#2d3532;
+  --accent:#3fbfa9; --accent-ink:#7fd6c7; --ask:#e0a83a; --ask-bg:#2a2412; --ok-bg:#12302b;
+  --phone:#0b0d0c; --phone-bubble:#202523; --phone-ink:#eef1f0; --phone-me:#1f8f7c; --mac:#222826;
+}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 "IBM Plex Sans KR",-apple-system,"Apple SD Gothic Neo",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+h1{font:700 40px/1.15 "Gowun Batang",serif;margin:0 0 6px;text-wrap:balance}
+h2{font:700 24px/1.3 "Gowun Batang",serif;margin:56px 0 14px;text-wrap:balance}
+h3{font:600 15px/1.4 "IBM Plex Sans KR",sans-serif;margin:22px 0 8px}
+p{max-width:66ch;margin:0 0 12px}
+.lede{font-size:17px;color:var(--ink-2);max-width:62ch}
+.eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:10px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent-ink)}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+.principles div{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.principles b{display:block;font-size:15px;margin-bottom:4px}
+.principles span{color:var(--ink-2);font-size:14px}
+.surfaces{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:start;margin:18px 0}
+@media (max-width:760px){.surfaces{grid-template-columns:1fr}}
+.surface{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:16px 18px}
+.surface h3{margin-top:0}
+.surface ul{padding-left:18px;margin:8px 0}
+.surface li{margin:4px 0}
+.tag{display:inline-block;font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.06em;padding:4px 7px;border-radius:3px;background:var(--ok-bg);color:var(--accent-ink);margin-right:6px}
+.tag.ask{background:var(--ask-bg);color:var(--ask)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--ink-2);font-size:13px}
+td.t{font-family:"IBM Plex Mono",monospace;white-space:nowrap;color:var(--ink-2)}
+/* timeline */
+.day{display:grid;grid-template-columns:70px 1fr 1fr;gap:0 18px;margin:16px 0;border-top:1px solid var(--line)}
+.day>div{padding:12px 0;border-bottom:1px solid var(--line)}
+.day .h{font-family:"IBM Plex Mono",monospace;color:var(--ink-2);font-size:13px;padding-top:14px}
+.day .hd{font:600 12px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--ink-2);border-bottom:2px solid var(--line);padding:8px 0}
+.day .off{color:var(--ink-2)}
+.day b{font-weight:600}
+/* phone mockups */
+.phones{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0}
+.phone{width:280px;background:var(--phone);border-radius:22px;padding:18px 14px 16px;color:var(--phone-ink);font-size:13.5px;line-height:1.5;box-sizing:border-box}
+.phone .who{font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;color:#9aa5a0;margin-bottom:10px}
+.bubble{background:var(--phone-bubble);border-radius:14px 14px 14px 4px;padding:9px 12px;margin:0 22px 8px 0;white-space:pre-line}
+.bubble.me{background:var(--phone-me);border-radius:14px 14px 4px 14px;margin:0 0 8px 22px;color:#fff}
+.keys{display:flex;flex-wrap:wrap;gap:6px;margin:4px 22px 10px 0}
+.keys span{background:#3a413e;border:1px solid #4d5551;border-radius:8px;padding:5px 9px;font-size:12.5px}
+.keys span.pick{background:var(--phone-me);border-color:var(--phone-me);color:#fff}
+.phone .cap{color:#9aa5a0;font-size:11.5px;margin-top:6px}
+.spoiler{background:#555c59;color:transparent;border-radius:3px}
+/* mac mockup */
+.mac{background:var(--mac);border:1px solid var(--line);border-radius:8px;padding:14px;margin:16px 0}
+.mac .bar{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-family:"IBM Plex Mono",monospace;font-size:13px}
+.mac .dot{width:9px;height:9px;border-radius:50%;background:var(--ask);flex:none}
+.mac .dot.ok{background:var(--accent)}
+.mac .stages{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.mac .stages div{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:13px}
+.mac .stages b{display:block;font-size:13px;margin-bottom:2px}
+.mac .stages span{color:var(--ink-2);font-size:12px}
+/* state machine */
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0}
+.state{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:10px 12px;font-size:13.5px}
+.state b{display:block;margin-bottom:4px}
+.state .to{color:var(--ink-2);font-size:12.5px;margin-top:6px}
+.callout{border-left:3px solid var(--accent);background:var(--card);padding:12px 16px;margin:14px 0;max-width:70ch}
+.callout.ask{border-color:var(--ask)}
+.small{font-size:13px;color:var(--ink-2)}
+ol.plan{padding-left:20px;max-width:70ch} ol.plan li{margin:6px 0}
+@media (prefers-reduced-motion:no-preference){.bubble{animation:in .3s ease-out both}@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+<main>
+<div class="eyebrow">AssetManager · UX 설계 메모 · 2026-09-03</div>
+<h1>뽀미 두 화면</h1>
+<p class="lede">수집하는 동안 폰은 에이전트가 씁니다. 그래서 사람은 그 시간에 맥 앞에 있고, 나머지 시간엔 폰을 들고 있습니다. 한 제품이 아니라 두 자리에 맞는 두 화면이 필요합니다. 맥은 <b>작업대</b>, 폰은 <b>주머니</b>입니다.</p>
+
+<h2>지켜야 할 다섯 가지</h2>
+<p class="small">이 세션에서 데이터를 만지며 확정된 원칙입니다. 화면은 이 다섯을 어기지 않는 한에서만 자유롭습니다.</p>
+<div class="principles">
+  <div><b>근거가 먼저</b><span>모든 숫자는 스크린샷 픽셀까지 거슬러 올라간다. 증빙 → 전표 → 분개 → 재무제표의 순서를 화면도 따른다.</span></div>
+  <div><b>경계는 렌즈</b><span>어디까지가 "내 돈"인지는 설정이 아니라 그때그때 바꾸는 렌즈다. 장부는 양끝만 적고, 분류는 읽을 때 한다.</span></div>
+  <div><b>묻는 에이전트</b><span>숫자로는 절대 안 나오는 것("그걸로 뭐 했어?")을 사람에게 묻고, 답이 곧 라벨이 된다.</span></div>
+  <div><b>원본 보존</b><span>스크린샷과 OCR을 영구 보관하고, 파서가 좋아지면 다시 처리한다. 낡는 건 원본이 아니라 알고리즘이다.</span></div>
+  <div><b>돈에 손대지 않음</b><span>읽기만 한다. 로그인은 사람만 하고, 이체·확인 버튼은 코드가 누르지 않는다.</span></div>
+</div>
+
+<h2>두 화면의 역할</h2>
+<div class="surfaces">
+  <div class="surface">
+    <h3>맥 · 작업대</h3>
+    <p class="small">폰이 미러링에 묶여 있는 시간, 그리고 월요일 아침처럼 앉아서 생각하는 시간.</p>
+    <ul>
+      <li><span class="tag">보기</span>수집 중 미러링 창이 곧 모니터다. 별도 앱을 만들지 않는다.</li>
+      <li><span class="tag">검토</span>네 단계 페이지. 증빙(블링크 비교), 분개장, 대차대조표, 실체 캔버스.</li>
+      <li><span class="tag">긋기</span>실체 캔버스에서 계좌를 배치하고 경계를 그린다. 배치는 브라우저에 남는다.</li>
+      <li><span class="tag ask">답하기</span>질문이 밀려 있으면 한꺼번에 답한다. 주간 리뷰의 "결과물" 칸을 채우는 자리.</li>
+    </ul>
+    <p class="small">넓고, 조용하고, 되돌릴 수 있는 곳. 여기서는 한 번에 한 달을 본다.</p>
+  </div>
+  <div class="surface">
+    <h3>폰 · 주머니</h3>
+    <p class="small">지금은 텔레그램 봇 뽀미. 나중엔 같은 역할의 네이티브 앱.</p>
+    <ul>
+      <li><span class="tag">알림</span>결제 한 줄. 오늘 합계 한 줄.</li>
+      <li><span class="tag ask">질문</span>한 번에 하나. 버튼 한 번으로 답이 끝난다.</li>
+      <li><span class="tag">열쇠</span>로그인은 여기서만 일어난다. "잠금 해제 → Face ID → 다시 잠금"이 유일한 손동작.</li>
+      <li><span class="tag">월요일</span>한 줄짜리 리뷰. 표는 맥으로 보낸다.</li>
+    </ul>
+    <p class="small">짧고, 한 번에 하나, 엄지로 끝나는 곳. 여기서는 장부를 읽지 않는다.</p>
+  </div>
+</div>
+
+<h2>하루의 흐름</h2>
+<p>수집은 폰이 잠긴 채 맥 옆에 있을 때만 됩니다. 그래서 시간대가 곧 화면을 정합니다.</p>
+<div class="day">
+  <div class="hd">시각</div><div class="hd">맥</div><div class="hd">폰</div>
+  <div class="h">06:30</div><div><b>수집.</b> 미러링 창에 KB, 케이뱅크, 카카오, 토스가 차례로 열린다. 사람은 자고 있다.</div><div class="off">잠긴 채 충전 중. 알림 없음.</div>
+  <div class="h">06:41</div><div>KB가 패턴 화면에서 멈춤. 10분 기다린다.</div><div><b>🔐 KB 로그인 필요.</b> 이것만이 수집 중에 오는 유일한 요청.</div>
+  <div class="h">07:30</div><div>수집 끝. 잔액 스냅샷과 새 전표가 들어옴.</div><div><b>☀️ 한 줄 요약.</b> "어제 6건 41만원, 순자산 ↑ 12만원. 케이뱅크는 못 읽었어."</div>
+  <div class="h">12:40</div><div class="off">—</div><div><b>💳 결제.</b> "쿠팡이츠 27,000원 · 오늘 2건 3만1천원"</div>
+  <div class="h">18:30</div><div class="off">—</div><div><b>❓ 질문 하나.</b> "이번 주 Cursor 43만원, 뭐 만들었어?" 버튼 여섯 개.</div>
+  <div class="h">월 09:00</div><div><b>리뷰 페이지.</b> 네 단계가 새로 생성되어 있다. 경계를 바꿔 보고, 밀린 질문에 답한다.</div><div><b>📊 한 줄.</b> "지난주 지출 128만원, 건설비 81%. 자세한 건 맥에."</div>
+</div>
+
+<h2>폰에서 오가는 말</h2>
+<p>네 가지 메시지면 충분합니다. 각각 한 화면, 한 동작입니다. 잔액은 스포일러로 가려 두고 누르면 보입니다.</p>
+<div class="phones">
+  <div class="phone"><div class="who">결제 알림 · 지금도 있음</div>
+    <div class="bubble">💳 결제
+쿠팡이츠 <b>27,000원</b> · 오늘 2건 31,400원</div>
+    <div class="cap">답 없음. 읽고 지나간다.</div></div>
+  <div class="phone"><div class="who">로그인 요청 · 수집 중 유일한 부탁</div>
+    <div class="bubble">🔐 KB스타뱅킹 로그인 필요
+폰을 열어 KB에 로그인한 뒤 <b>다시 잠가 주세요</b>. 10분 안에요. 잠기면 이어서 읽습니다.</div>
+    <div class="cap">손동작 하나로 끝. 봇은 그동안 기다린다.</div></div>
+  <div class="phone"><div class="who">질문 · 하루 하나</div>
+    <div class="bubble">❓ 이번 주 Cursor <b>431,826원</b>. 뭐 만들었어?</div>
+    <div class="keys"><span class="pick">역량</span><span>시간</span><span>즐거움</span><span>유지</span><span>관계</span><span>건강</span><span>나중에</span></div>
+    <div class="bubble me">역량. KB 파서랑 뽀미 대화 모드</div>
+    <div class="bubble">적어 뒀어. 이번 주 건설비 81%.</div>
+    <div class="cap">버튼이 라벨, 글은 결과물. 둘 다 저장.</div></div>
+  <div class="phone"><div class="who">아침 한 줄</div>
+    <div class="bubble">☀️ 어제 6건 <span class="spoiler">412,300원</span>
+순자산 <span class="spoiler">↑ 120,000원</span> · 케이뱅크는 못 읽었어(로그인 유지 꺼짐)</div>
+    <div class="cap">한 줄, 스포일러, 못 한 것을 먼저.</div></div>
+</div>
+<div class="callout ask">질문은 하루에 하나만 보냅니다. 두 개부터는 밀어 두고, 밀린 것은 월요일에 맥에서 한 번에 답하게 합니다. 대화가 누적되면 봇이 아니라 숙제가 됩니다.</div>
+
+<h2>맥에서 보는 것</h2>
+<div class="mac">
+  <div class="bar"><span class="dot"></span>수집 중 · KB스타뱅킹 · 전체계좌 읽는 중 · 3/4 · 로그인 대기 6:12 남음</div>
+  <div class="stages">
+    <div><b>1 증빙·전표</b><span>스크린샷 위치 그대로의 글자. 호버하면 원본이 맥동.</span></div>
+    <div><b>2 분개장</b><span>양끝 계정만. 유형은 렌즈가 정함.</span></div>
+    <div><b>3 대차대조표</b><span>월초·월말. 측정/이월/미측정 배지.</span></div>
+    <div><b>4 실체</b><span>캔버스. 아이콘 노드, 금액 굵기의 선, 경계 사각형.</span></div>
+  </div>
+</div>
+<p>위의 상태 줄 하나가 맥 쪽에 새로 필요한 전부입니다. 지금은 터미널 출력이 그 역할을 하고, 텔레그램 데스크톱이 같은 알림을 받습니다. 별도 모니터 앱은 만들지 않습니다. 미러링 창 자체가 가장 정직한 모니터입니다.</p>
+
+<h2>수집 중에는 폰을 건드리지 않는다</h2>
+<p>이 세션에서 확인한 사실입니다. 폰을 잠금 해제하는 순간 미러링이 끊깁니다. 그러니 수집 중에 폰으로 뭔가를 요구하는 알림은 수집을 스스로 망칩니다. 상태 넷으로 정리됩니다.</p>
+<div class="states">
+  <div class="state"><b>대기</b>폰은 사람 것. 결제 알림, 질문, 아침 한 줄이 모두 이 상태에서만 나간다.<div class="to">→ 예약 시각이 되고 폰이 잠겨 있으면 수집</div></div>
+  <div class="state"><b>수집</b>폰은 에이전트 것. 나가는 메시지는 없다. 결제 알림이 생기면 큐에 쌓는다.<div class="to">→ 로그인 벽을 만나면 로그인 대기 · 끝나면 마무리</div></div>
+  <div class="state"><b>로그인 대기</b>유일하게 폰을 부르는 상태. 한 문장, 시한 표시. 사람이 잠그면 재연결.<div class="to">→ 재연결되면 수집 · 시한이 지나면 그 앱만 건너뛰고 수집</div></div>
+  <div class="state"><b>마무리</b>큐에 쌓인 알림을 한 줄로 합쳐 보낸다. "수집 끝. 그동안 결제 2건."<div class="to">→ 대기</div></div>
+</div>
+<div class="callout">지금 코드에는 이 상태가 암묵적으로만 있습니다. <span class="mono">RUN["deadline"]</span>이 로그인 대기이고, 결제 알림은 수집 중에도 바로 나갑니다. 상태 하나를 명시하고 "수집 중이면 큐"로 바꾸는 것이 첫 변경입니다.</div>
+
+<h2>네이티브 앱으로 갈 때</h2>
+<p>텔레그램은 이미 잘하는 게 많습니다. 대화, 버튼, 맥과 폰에 같은 내용. 그래서 앱은 텔레그램을 대체하는 게 아니라, 텔레그램이 못 하는 세 가지 때문에 만듭니다.</p>
+<table>
+  <tr><th>텔레그램이 못 하는 것</th><th>앱이 하는 것</th><th>왜 이 프로젝트에 맞는가</th></tr>
+  <tr><td>잠금 화면에 상태를 붙여 두기</td><td><b>Live Activity</b> "뽀미가 KB 읽는 중 · 폰을 잠가 두세요"</td><td>수집의 유일한 요구가 "폰을 잠가 둬"라서, 잠금 화면이 딱 맞는 자리다.</td></tr>
+  <tr><td>열지 않고 보기</td><td><b>위젯</b> 오늘 지출 한 줄, 순자산이 향하는 방향 하나</td><td>아침 한 줄을 알림이 아니라 홈 화면에 둔다. 밀리지 않는다.</td></tr>
+  <tr><td>알림에서 바로 답하기</td><td><b>액션 알림</b> 질문의 여섯 버튼이 알림 자체에 붙는다</td><td>질문은 열어서 답하면 이미 무겁다. 알림에서 엄지 한 번.</td></tr>
+  <tr><td>잔액 가리기</td><td>Face ID 뒤에 숫자</td><td>스포일러보다 정직한 가림.</td></tr>
+</table>
+<p class="small">앱은 얇은 클라이언트입니다. 장부는 맥의 SQLite에 있고, 폰은 같은 네트워크(또는 Tailscale)로 맥에 묻습니다. 폰이 맥에 닿지 않을 때는 마지막 한 줄만 보여 줍니다. 그래도 됩니다. 폰은 장부를 읽는 곳이 아니니까요.</p>
+
+<h2>언제 앱을 만드는가</h2>
+<ol class="plan">
+  <li><b>지금은 안 만든다.</b> 텔레그램에 위의 네 메시지와 상태 넷을 먼저 넣는다. 질문 버튼과 큐는 하루치 작업이다.</li>
+  <li><b>질문에 답하는 게 귀찮아지는 순간</b>이 신호다. 그때 액션 알림과 위젯만 있는 앱을 만든다. 채팅은 계속 텔레그램.</li>
+  <li><b>Live Activity</b>는 수집이 하루 두 번을 넘고 로그인 요청이 잦아질 때 넣는다. 지금은 KB만 패턴을 묻는다.</li>
+  <li>맥에는 끝까지 앱을 만들지 않는다. 네 단계 HTML과 미러링 창이면 된다.</li>
+</ol>
+
+<h2>코드에 생기는 변화</h2>
+<table>
+  <tr><th>변경</th><th>어디</th><th>크기</th></tr>
+  <tr><td>수집 상태 명시와 알림 큐 (수집 중이면 쌓았다가 마무리에 한 줄)</td><td class="t">am.py serve / notify</td><td>작음</td></tr>
+  <tr><td>질문 메시지: 큰 지출 하나 고르기, 여섯 버튼, 답을 facts에 저장, 하루 하나 제한</td><td class="t">am.py nudge / execute_tool</td><td>중간</td></tr>
+  <tr><td>아침 한 줄: 어제 건수·합계, 순자산 방향, 못 읽은 앱을 먼저</td><td class="t">am.py today_text 확장</td><td>작음</td></tr>
+  <tr><td>월요일: 네 단계 페이지를 자동 생성하고 한 줄만 폰으로</td><td class="t">report.py + serve 스케줄</td><td>작음</td></tr>
+  <tr><td>결과물 답을 3단계 전환표의 빈 칸에 채우기</td><td class="t">report.py balance</td><td>작음</td></tr>
+</table>
+<p class="small">전부 폰 없이 되는 일입니다. 폰이 필요한 일(케이뱅크 목록, 카카오 35일 소급)은 별개로 남아 있습니다.</p>
+</main>

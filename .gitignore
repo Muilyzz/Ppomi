@@ -1,0 +1,35 @@
+# secrets and local state
+.env
+data/ledger.db*
+data/shots/
+data/*.log
+data/telemetry.jsonl
+# build products
+Ppomi/.build/
+Ppomi/.swiftpm/
+phone
+__pycache__/
+*.pyc
+.DS_Store
+
+# packaging (scripts/make-app.sh)
+dist/
+*.icns
+*.iconset/
+hub/node_modules/
+.vercel/
+data/style*
+data/report-*.html
+data/timeline.html
+data/chats/
+.claude/
+.ppomi/
+.venv/
+node_modules/
+hub/.env.local
+.env.local
+# real-ledger parity oracles (owner-only; tests XCTSkip without them)
+Ppomi/Tests/PpomiTests/parse-parity.json
+Ppomi/Tests/PpomiTests/column-parity.json
+Ppomi/Tests/PpomiTests/timeline-parity.json
+Ppomi/Tests/PpomiTests/stitch-parity.json

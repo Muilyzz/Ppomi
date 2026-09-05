@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.25">
+  <!-- Stroke rendition of the brand paw on the sidebar's 16 grid, full bleed.
+       The palm ring is the original palm curve inset by half this stroke, so the outer
+       edge stays on the mark's silhouette and the thin line keeps its curve character
+       (broad shoulders, tapered bottom). Toes stay solid — at 3px a ring turns to mush. -->
+  <ellipse cx="2.13" cy="5.82" rx="1.57" ry="2" transform="rotate(-20 2.13 5.82)" fill="#000" stroke="none"/>
+  <ellipse cx="5.28" cy="3.24" rx="1.65" ry="2.08" fill="#000" stroke="none"/>
+  <ellipse cx="10.72" cy="3.24" rx="1.65" ry="2.08" fill="#000" stroke="none"/>
+  <ellipse cx="13.87" cy="5.82" rx="1.57" ry="2" transform="rotate(20 13.87 5.82)" fill="#000" stroke="none"/>
+  <path d="M8 7.45 C 10.4 7.45 11.82 9.19 11.82 11.01 C 11.82 12.88 10.09 14.21 8 14.21 C 5.91 14.21 4.18 12.88 4.18 11.01 C 4.18 9.19 5.6 7.45 8 7.45 Z"/>
+</svg>

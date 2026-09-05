@@ -1,0 +1,180 @@
+[
+{
+"name": "kb",
+"text": "[Web발신]\nKB국민카드1*2*승인\n홍*동\n12,000원 일시불\n09/02 12:34\n스타벅스코리아\n누적1,234,567원",
+"expect": {
+"kind": "approval",
+"amount": 12000,
+"merchant": "스타벅스코리아",
+"ts": "2026-09-02 12:34",
+"cumulative": 1234567
+},
+"parsed": {
+"ts": "2026-09-02 12:34",
+"kind": "approval",
+"amount": 12000,
+"merchant": "스타벅스코리아",
+"card": "KB국민카드(1*2*)",
+"cumulative": 1234567
+}
+},
+{
+"name": "shinhan",
+"text": "[Web발신]\n신한카드(1234)승인 홍*동 45,000원(일시불)09/01 19:02 배달의민족 누적2,345,678원",
+"expect": {
+"kind": "approval",
+"amount": 45000,
+"merchant": "배달의민족",
+"ts": "2026-09-01 19:02",
+"card": "신한카드(1234)"
+},
+"parsed": {
+"ts": "2026-09-01 19:02",
+"kind": "approval",
+"amount": 45000,
+"merchant": "배달의민족",
+"card": "신한카드(1234)",
+"cumulative": 2345678
+}
+},
+{
+"name": "cancel",
+"text": "[Web발신]\n삼성카드 승인취소\n홍*동님\n8,900원\n09/02 09:10\n홈플러스",
+"expect": {
+"kind": "cancel",
+"amount": 8900,
+"merchant": "홈플러스"
+},
+"parsed": {
+"ts": "2026-09-02 09:10",
+"kind": "cancel",
+"amount": 8900,
+"merchant": "홈플러스",
+"card": "삼성카드",
+"cumulative": null
+}
+},
+{
+"name": "bank",
+"text": "[Web발신]\nKB국민은행 출금\n09/02 08:00\n123,456원\n잔액 518,574원\n카드결제",
+"expect": {
+"kind": "withdrawal",
+"amount": 123456,
+"cumulative": 518574,
+"merchant": "카드결제"
+},
+"parsed": {
+"ts": "2026-09-02 08:00",
+"kind": "withdrawal",
+"amount": 123456,
+"merchant": "카드결제",
+"card": null,
+"cumulative": 518574
+}
+},
+{
+"name": "deposit-memo",
+"text": "[Web발신]\nKB국민은행 입금\n09/02 08:00\n12,000원\n잔액 518,574원\n신한카드취소",
+"expect": {
+"kind": "deposit",
+"amount": 12000
+},
+"parsed": {
+"ts": "2026-09-02 08:00",
+"kind": "deposit",
+"amount": 12000,
+"merchant": null,
+"card": "신한카드",
+"cumulative": 518574
+}
+},
+{
+"name": "kakao",
+"text": "[Web발신]\n카카오뱅크 홍*동\n09/02 12:34\n입금 50,000원\n홍길동 (출금계좌 1234)\n잔액 1,000,000원",
+"expect": {
+"kind": "deposit",
+"amount": 50000,
+"cumulative": 1000000
+},
+"parsed": {
+"ts": "2026-09-02 12:34",
+"kind": "deposit",
+"amount": 50000,
+"merchant": "입금 홍길동",
+"card": null,
+"cumulative": 1000000
+}
+},
+{
+"name": "cum-first",
+"text": "[Web발신]\n현대카드 승인 누적2,345,678원 12,340원 09/01 19:02 스타벅스",
+"expect": {
+"amount": 12340,
+"cumulative": 2345678
+},
+"parsed": {
+"ts": "2026-09-01 19:02",
+"kind": "approval",
+"amount": 12340,
+"merchant": "스타벅스",
+"card": "현대카드",
+"cumulative": 2345678
+}
+},
+{
+"name": "intl",
+"text": "[국제발신]\n우리카드 승인 3,000원 09/02 10:00 GS25",
+"expect": {
+"kind": "approval",
+"amount": 3000,
+"merchant": "GS25"
+},
+"parsed": {
+"ts": "2026-09-02 10:00",
+"kind": "approval",
+"amount": 3000,
+"merchant": "GS25",
+"card": "우리카드",
+"cumulative": null
+}
+},
+{
+"name": "rollover",
+"text": "[Web발신]\n현대카드 승인 1,000원 일시불 12/31 23:59 GS25",
+"expect": {
+"ts": "2025-12-31 23:59"
+},
+"parsed": {
+"ts": "2025-12-31 23:59",
+"kind": "approval",
+"amount": 1000,
+"merchant": "GS25",
+"card": "현대카드",
+"cumulative": null
+}
+},
+{
+"name": "ad",
+"text": "[Web발신] (광고) KB국민은행 내 돈 관리에 필요한 정보",
+"expect": null,
+"parsed": null
+},
+{
+"name": "comma-won",
+"text": "[Web발신]\n고객님, 원하시는 카드 승인 알림입니다",
+"expect": null,
+"parsed": null
+},
+{
+"name": "declined",
+"text": "[Web발신]\n신한카드(1234)승인거절 홍*동 12,000원(일시불)09/02 12:34 스타벅스 한도초과",
+"expect": null,
+"parsed": null
+},
+{
+"name": "foreign",
+"text": "[Web발신]\n신한카드(1234)해외승인 홍*동 USD 12.34 09/01 19:02 AMAZON.COM 누적2,345,678원",
+"expect": null,
+"parsed": null
+}
+]

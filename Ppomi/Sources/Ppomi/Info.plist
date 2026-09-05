@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Embedded into the executable (__TEXT,__info_plist) by Package.swift: a SwiftPM binary has no bundle, and macOS kills
+         any process that asks for the microphone or speech recognition without these strings. -->
+    <key>CFBundleName</key><string>Ppomi</string>
+    <key>NSMicrophoneUsageDescription</key><string>"뽀미야"라고 부르면 듣고, 이어지는 말을 명령으로 받습니다. 소리는 Mac 안에서만 글로 바뀝니다.</string>
+    <key>NSSpeechRecognitionUsageDescription</key><string>말을 글로 바꾸는 데 씁니다. 온디바이스 인식이라 소리가 밖으로 나가지 않습니다.</string>
+</dict>
+</plist>

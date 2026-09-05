@@ -1,0 +1,4 @@
+{
+  "cleanUrls": true,
+  "functions": { "api/*.js": { "maxDuration": 10 } }
+}

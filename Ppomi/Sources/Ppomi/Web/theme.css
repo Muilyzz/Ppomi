@@ -1,0 +1,89 @@
+/* Web/theme.css — 작업대 4페이지(타임라인·증빙·대화·절차) 공통. Web.page()가 각 페이지 <style>의 THEME 자리 자리에 넣는다.
+   검은 계기판: 링과 페이지가 같은 검정(#000), 무채 램프 5단, 상태 3색 — 금 = 뽀미가 폰을 잡고 있다 · 흰 = 당신 차례 · 회 = 대기.
+   금색은 이 뜻 하나뿐이다(림·[승인]은 흰). 페이지 <style>에는 그 페이지만의 규칙(SVG, 종이 열, Deep Chat 띠)만 남긴다. 외부 폰트 없음. */
+:root{
+  color-scheme:dark;
+  --bg:#000;                        /* 페이지 = 링 = 미러링 창의 검은 여백 */
+  --card:#131313;                   /* 카드 · 입력창 · <pre> */
+  --pick:rgba(255,255,255,.08);     /* 선택 · 호버 · 사용자 말풍선 · 차트 선택 칸 */
+  --line:rgba(255,255,255,.10);     /* 헤어라인: 구분선·테두리 색은 이것 하나 */
+  --line2:rgba(255,255,255,.25);    /* 컨트롤 테두리(버튼·dashed 칩·입력 포커스) */
+  --fg:#e6e6e3;                     /* 본문 */
+  --meta:#8a8a86;                   /* 라벨 · 메타 · 비활성 · 구분자 (4.9:1) */
+  --go:#c7a300;                     /* 진행: 뽀미가 폰을 잡고 있다. 웹 페이지에서는 쓸 곳이 없다(림·캡션은 AppKit) */
+  --turn:#e6e6e3;                   /* 승인: 사람 차례 = [승인] 버튼의 흰 채움 하나 */
+  --wait:rgba(255,255,255,.25);     /* 대기: 아무도 폰을 안 잡고 있다 */
+  --bad:#d33;                       /* 유일한 예외: 증빙 종이 위 '파서가 놓친 금액 행' 상자 */
+  --sans:-apple-system,'Apple SD Gothic Neo',sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;
+  --r:6px;                          /* 컨트롤 */
+  --rc:8px;                         /* 카드 */
+}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font:13px/1.5 var(--sans);max-width:640px;padding:16px 20px 24px;box-sizing:border-box;-webkit-font-smoothing:antialiased}   /* 본문 x = 12(inset)+20 = 탭 텍스트 x */
+h1,h2,h3{font:inherit;margin:0}   /* 제목은 없다: 탭이 제목, 섹션은 .sec */
+p{margin:0 0 12px}
+b,strong{font-weight:600}
+a{color:var(--fg);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px;cursor:pointer}
+a:hover{text-decoration-color:var(--meta)}
+code{font:12px/1.5 var(--mono);background:var(--card);padding:1px 5px;border-radius:4px}
+pre{margin:0;padding:12px 16px;background:var(--card);border-radius:var(--rc);white-space:pre-wrap;font:12px/1.5 var(--mono)}
+svg text{font-family:var(--sans)}
+::selection{background:rgba(255,255,255,.18)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---- 타이포 4단 (본문 13은 body). 숫자는 모노·tabular. */
+.disp{font:500 24px/1.2 var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}   /* 페이지당 1개: 숫자만, '원'은 옆에 .meta */
+.key{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}                          /* 방정식 3개 */
+.lbl{font-size:12px;color:var(--meta)}                                                          /* 필드 라벨 */
+.meta{font-size:11px;color:var(--meta)}                                                         /* 시각 · 건수 · 파일 · 근거 */
+.n,.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mute{color:var(--meta)}
+.strong{font-weight:600}                                                                        /* 미관측 ≠ 0 처럼 색 없이 세우는 강조 */
+
+/* ---- 섹션 = 11px 회색 라벨 + 오른쪽으로 헤어라인 + (선택) 오른쪽 끝 .r 메타/범례/내비 */
+.sec{display:flex;align-items:center;gap:12px;margin:32px 0 8px;font-size:11px;color:var(--meta);white-space:nowrap}
+.sec:first-child{margin-top:0}
+.sec::after{content:'';flex:1;height:1px;background:var(--line);order:1}
+.sec .r{order:2;display:inline-flex;gap:12px;align-items:center}
+.sec .r i{display:inline-block;width:10px;height:10px;box-sizing:border-box;vertical-align:-1px;margin-right:4px}   /* 범례 스와치: style로 background 또는 border */
+hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+
+/* ---- 텍스트 내비(참고 디자인의 회색 내비 글자): 기간 선택, 증빙 앱 선택. .on 하나만 본문색 */
+.nav{display:flex;gap:16px;font-size:12px;color:var(--meta)}
+.nav>*{cursor:pointer;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-decoration:none}
+.nav>.on{color:var(--fg)}
+
+/* ---- 알약: secondary(투명+테두리) / .primary(흰 채움 — 화면에 하나, [승인]) */
+.pill{display:inline-flex;align-items:center;height:26px;padding:0 12px;border-radius:var(--r);border:1px solid var(--line2);background:transparent;color:var(--fg);font:12px/1 var(--sans);cursor:pointer;white-space:nowrap}
+.pill:hover{background:var(--pick)}
+.pill.primary{background:var(--turn);color:#000;border-color:transparent;font-weight:600}
+
+/* ---- 칩: 정지된 계획표의 한 단계(절차 탭). .you = 사람이 하는 단계(로그인·Face ID·승인) */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--line);border-radius:var(--r);color:var(--fg);font-size:12px;line-height:18px;white-space:nowrap}
+.chip.you{border-style:dashed;border-color:var(--line2);color:var(--meta)}
+.chip .g{color:var(--meta);font-size:11px}   /* 글리프/접두어 단어 */
+.sep{color:var(--meta);margin:0 4px}
+
+/* ---- 카드 · 표 · 3열 격자 */
+.card{background:var(--card);border-radius:var(--rc);padding:12px 16px;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:16px}   /* 행 24px */
+th{font-weight:500;color:var(--meta);font-size:11px}
+td.n,th.n{text-align:right}
+tr[data-uid]{cursor:pointer} tr[data-uid]:hover td{background:var(--pick)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px;margin:8px 0}
+.grid3 .lbl{display:block}
+
+/* ---- 접는 안내(native <details>) */
+details{margin:8px 0}
+summary{cursor:pointer;font-size:11px;color:var(--meta);list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸ '} details[open] summary::before{content:'▾ '}
+details p{font-size:11px;color:var(--meta);margin:4px 0 0;max-width:60ch}
+
+/* ---- 입력 */
+input,textarea{font:13px var(--sans);color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;outline:none}
+input:focus,textarea:focus{border-color:var(--line2)}
