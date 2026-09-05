@@ -56,6 +56,23 @@ final class RingView: NSView {
 /// Both stay at normal level so other applications cannot permanently cover the workbench.
 final class MainPanel: NSPanel {
     var phoneID: CGWindowID?
+    private var kioskAction: (() -> Void)?
+
+    /// Bind the button's semantic action so mouse clicks, accessibility presses, and performZoom agree.
+    /// The controller supplies its state directly; no application-delegate launch ordering is required.
+    func bindKioskButton(_ action: @escaping () -> Void) {
+        kioskAction = action
+        guard let button = standardWindowButton(.zoomButton) else { return }
+        button.target = self
+        button.action = #selector(performZoom(_:))
+        button.toolTip = "키오스크"
+        button.setAccessibilityLabel("키오스크")
+    }
+    override func performZoom(_ sender: Any?) {
+        if let kioskAction { kioskAction() }
+        else { super.performZoom(sender) }
+    }
+
     override func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
         if place == .above, let p = phoneID { super.order(.below, relativeTo: Int(p)) }
         else { super.order(place, relativeTo: otherWin) }
@@ -295,7 +312,7 @@ final class KioskController {
 
     /// The 뽀미 window. A non-activating panel: key for typing, but the app stays inactive, so Stage Manager keeps the
     /// mirroring window on stage; .canJoinAllApplications keeps the panel there too. Its content is the ring; the title
-    /// bar is transparent so only the traffic lights sit on the top band. Green = kiosk (AppDelegate); native fullscreen off.
+    /// bar is transparent so only the traffic lights sit on the top band. Green = kiosk; native fullscreen off.
     private func makeMain() -> NSPanel {
         let c = RingContent(frame: NSRect(origin: .zero, size: RingContent.size(bandWidth: 620, phone: state.phoneSize)))
         c.phoneSize = state.phoneSize
@@ -315,7 +332,7 @@ final class KioskController {
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllApplications, .fullScreenNone]
         p.contentView = c
-        p.standardWindowButton(.zoomButton)?.toolTip = "키오스크"
+        p.bindKioskButton { [weak self] in self?.state.toggleKiosk() }
         p.center()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: p, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.wantMain = false }

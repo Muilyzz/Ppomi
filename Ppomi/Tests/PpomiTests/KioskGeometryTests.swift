@@ -3,6 +3,25 @@ import XCTest
 @testable import Ppomi
 
 final class KioskGeometryTests: XCTestCase {
+    /// Accessibility activation does not emit mouseDown. Both ways must invoke the actual green-button action.
+    @MainActor func testGreenButtonUsesKioskActionForClickAndAccessibilityPress() throws {
+        _ = NSApplication.shared
+        let panel = MainPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 894),
+                              styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: true)
+        panel.isReleasedWhenClosed = false
+        defer { panel.close() }
+        var toggles = 0
+        panel.bindKioskButton { toggles += 1 }
+        let button = try XCTUnwrap(panel.standardWindowButton(.zoomButton))
+        let originalFrame = panel.frame
+        button.performClick(nil)
+        XCTAssertEqual(toggles, 1)
+        _ = button.accessibilityPerformPress() // an unshown accessibility element may report false after sending its action
+        XCTAssertEqual(toggles, 2)
+        XCTAssertEqual(panel.frame, originalFrame)
+        XCTAssertFalse(panel.isVisible)
+    }
+
     /// Configure an unshown native panel: even before AX can measure a phone, all bands must have usable frames.
     @MainActor func testInitialRingGetsMinimumSizeAndNonzeroDockWithoutShowingAWindow() throws {
         _ = NSApplication.shared

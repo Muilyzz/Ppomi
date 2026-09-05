@@ -10,8 +10,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var pendingState: AppState?
     var state: AppState?
 
-    private var zoomMonitor: Any?
-
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         // Settings can be visible while the controller's panel is closed. Always reveal the workbench outside kiosk;
         // revealing in kiosk would move its shared view back into the window and leave the kiosk band empty.
@@ -22,15 +20,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         state = Self.pendingState
         NSApp.setActivationPolicy(.regular)
-        // Intercept the green button before it becomes performZoom.
-        zoomMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] e in
-            guard let self, let w = e.window, w.title == "뽀미",
-                  let zoom = w.standardWindowButton(.zoomButton) else { return e }
-            let p = zoom.convert(e.locationInWindow, from: nil)
-            guard zoom.bounds.insetBy(dx: -6, dy: -6).contains(p) else { return e }
-            DispatchQueue.main.async { self.state?.toggleKiosk() }
-            return nil
-        }
     }
 }
 
@@ -130,4 +119,3 @@ private struct MenuContent: View {
     /// Pick a tab; bring the window up unless the kiosk band already shows it.
     private func show(_ t: AppState.Tab) { state.show(t); if !state.kioskOn { state.reveal() } }
 }
-

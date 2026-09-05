@@ -39,6 +39,8 @@ cd Ppomi && swift run Ppomi
 
 인증서 없이 `scripts/make-app.sh`를 실행하면 패키징 확인용 애드혹 빌드를 만듭니다. 애드혹 빌드는 코드가 바뀔 때마다 macOS 권한 연결이 끊길 수 있으므로 기존 설치본에 반복해서 덮어쓰지 마세요. 개발 서명으로 처음 전환할 때는 손쉬운 사용·화면 기록을 다시 허용해야 합니다. 배포용 서명·공증에는 별도의 `SIGN_ID`·`NOTARY_PROFILE`을 사용합니다.
 
+권한이 켜져 있는데도 앱에서 거부된다면 이전 빌드의 서명 조건이 남아 있을 수 있습니다. 이 경우 현재 앱의 해당 권한 항목을 갱신해야 합니다. [개발 서명 전환 후 권한 복구 기록](docs/release-status.md#개발-서명-전환-후-권한-복구)을 참고하세요.
+
 장부 위치는 기본이 저장소의 `data/ledger.db`(저장소 밖에서 실행하면 `~/Library/Application Support/Ppomi/data/ledger.db`)이고, 환경변수 `PPOMI_DB` 또는 설정 창에서 바꿀 수 있습니다(`Ledger/Model.swift` 의 `AppSettings.dbPath`). 발자국·스크린샷·`.env` 는 그 옆을 따라갑니다.
 
 ## 권한
