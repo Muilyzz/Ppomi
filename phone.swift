@@ -482,6 +482,7 @@ func mirrorState() -> String {
     var texts: [String] = []
     axTexts(w, into: &texts)
     let all = texts.joined(separator: " ")
+    if all.contains("iPhone 잠금 해제") { return "DISCONNECTED" }
     if all.contains("사용 중") || all.contains("잠그십시오") { return "IN_USE" }
     if all.contains("중단됨") || all.contains("다시 시도") { return "DISCONNECTED" }
     if all.contains("일시 정지") || texts.contains("재개") { return "PAUSED" }

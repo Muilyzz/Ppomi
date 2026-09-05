@@ -25,6 +25,13 @@ final class ServeTests: XCTestCase {
         XCTAssertFalse(Tools.consented("오늘 얼마 썼어?")); XCTAssertFalse(Tools.consented("타니베이 얼마야"))
     }
 
+    func testMirroringUnlockOverlay() {
+        XCTAssertTrue(Phone.needsUnlock(shot(["iPhone 잠금 해제", "연결"])))
+        XCTAssertFalse(Phone.needsUnlock(shot(["숙소 상세", "모든 객실 보기"])))
+        XCTAssertFalse(Phone.needsUnlock(shot([])))
+        XCTAssertFalse(Phone.needsUnlock(shot(["iPhone 잠금 해제 방법 안내"])))
+    }
+
     func testPayGate() throws {
         XCTAssertTrue(Tools.isPayWord("결제하기")); XCTAssertTrue(Tools.isPayWord("406,600원 결제")); XCTAssertTrue(Tools.isPayWord("주문 완료")); XCTAssertFalse(Tools.isPayWord("예약하기")); XCTAssertFalse(Tools.isPayWord("확인")); XCTAssertFalse(Tools.isPayWord("총 결제 금액 406,600원")); XCTAssertFalse(Tools.isPayWord("할인 및 결제 정보"))
         let path = NSTemporaryDirectory() + "ppomi-pay-\(UUID().uuidString)/ledger.db"

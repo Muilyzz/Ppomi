@@ -62,11 +62,19 @@ enum Phone {
         var words: [OCR.Word] = []
         for _ in 0..<tries {
             words = try screen().words
+            if needsUnlock(words) {
+                throw Failure(description: "iPhone에서 Mac 연결을 위한 잠금 해제를 직접 완료한 뒤, 다시 잠가 Mac 옆에 놓아 주세요.")
+            }
             if let b = find(words, #"^(다시 시도|재개)$"#) { try tap(b) }                       // click through
             else if !words.isEmpty, find(words, #"^(연결이 (중단됨|일시 정지됨)|iPhone(을| ).*(사용 중|잠금 해제).*)$"#) == nil { return words }
             sleep(4)                                                                          // grey 'connecting' frame: wait
         }
         return words
+    }
+
+    /// Mirroring's authentication overlay is not an interactive phone screen.
+    static func needsUnlock(_ words: [OCR.Word]) -> Bool {
+        words.contains { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) == "iPhone 잠금 해제" }
     }
 
     // ---------------------------------------------------------------- typing

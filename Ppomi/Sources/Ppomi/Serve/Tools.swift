@@ -400,7 +400,8 @@ final class Tools {
         let state = ((try? Phone.run(["state"])) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if state == "IN_USE" { return refuse("in_use", "실행 안 함: 폰이 사용 중(잠금 해제)이라 미러링이 끊겨 있다. 사용자에게 '폰 잠그고 Mac 옆에 둬줘' 한 줄로 부탁하고 멈춰라.") }
         if state == "NONE" { return refuse("mirror", "실행 안 함: iPhone 미러링 창이 없다. 사용자에게 iPhone 미러링 앱을 켜 달라고 한 줄로 부탁하고 멈춰라.") }
-        try? Phone.wake()                                    // paused / disconnected: click through 재개·다시 시도
+        do { try Phone.wake() }                              // paused / disconnected: click through 재개·다시 시도
+        catch { return refuse("mirror", "실행 안 함: \(error)") }
         return nil
     }
 

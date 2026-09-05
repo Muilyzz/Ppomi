@@ -24,7 +24,7 @@
 
 ## 설치
 
-**다운로드**: [최신 릴리스](https://github.com/Muilyzz/Ppomi/releases) 의 공증된 `.zip` 을 풀어 `Ppomi.app` 을 `/Applications` 로 옮기세요.
+**다운로드**: 현재 [v0.1.0 프리릴리스](https://github.com/Muilyzz/Ppomi/releases)는 애드혹 서명된 테스트 빌드이며, Apple 공증 전입니다. `.zip`을 풀어 `Ppomi.app`을 `/Applications`로 옮길 수 있지만 macOS에서 실행이 차단될 수 있습니다. 일반 배포용 Developer ID 서명·공증 빌드는 준비 중입니다.
 
 ```sh
 # 직접 앱으로
