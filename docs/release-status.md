@@ -8,12 +8,15 @@
 - `cd hub && npm test`: 18개 통과.
 - `python3 test_am.py`, `python3 test_style.py`: 모두 종료 코드 0.
 - 최초 `phone state`는 CONNECTED였으나 실제 화면은 `iPhone 잠금 해제` 인증 대기였다. 상태 판별을 수정해 DISCONNECTED 반환을 실폰에서 확인했다.
-- 인증 대기 화면 감지 시 조작을 중단하도록 수정했고, `Phone.wake` 오류를 게이트에서 무시하지 않도록 했다. 수정 후 실제 MCP `phone_screen` 호출이 사용자 연결 인증 안내를 반환함을 확인했다. 실폰 재생은 사용자 인증 완료 후 진행해야 한다.
+- 인증 대기 화면 감지 시 조작을 중단하도록 수정했고, `Phone.wake` 오류를 게이트에서 무시하지 않도록 했다. 수정 후 실제 MCP `phone_screen` 호출이 사용자 연결 인증 안내를 반환함을 확인했다. 이후 사용자 인증 완료 후 Mac의 연결 버튼을 눌러 미러링을 재개했다.
 - GitHub v0.1.0: 프리릴리스, Ppomi-0.1.0.zip 첨부됨.
 - 키체인 코드 서명 인증서: Apple Development만 존재하며 Developer ID Application은 없음.
 - README와 랜딩의 공증 완료 문구를 공증 준비 중으로 수정.
 - 최초 배포는 `Not authorized`로 실패했으나, `hub/`에서 `vercel deploy --prod --yes --scope muilyzz`로 팀을 명시해 배포 성공. `https://ppomi.muilyzz.com` 응답에서 수정된 안내 확인.
-- 실제 MCP 초기화·`read_playbook`·`run_combo(max_steps: 1)` 호출 성공. 여기어때 구조화 발자국이 0개여서 `아는 길 없음`으로 종료. Markdown 절차와 재생용 JSONL 발자국은 별개이며, 아직 실폰 재생 성공은 검증되지 않음.
+- 초기 MCP 확인 시 여기어때 구조화 발자국은 0개였다. Markdown 절차와 재생용 JSONL 발자국은 별개다.
+- 실폰 MCP 검증 완료: `phone_open`으로 여기어때 열기, 홈의 검색 탭 누르기로 발자국을 자동 기록했다. 홈으로 돌아와 `run_combo(app: 여기어때, max_steps: 1)` 호출 결과 `⊙ ^검색$ ✓`, 검색 화면 도착 및 걸음 수 제한 정지를 확인했다. 같은 검색 화면에서 다시 호출하자 `아는 화면이 아님`으로 추가 조작 없이 정지했다.
+- 검증 범위는 비결제 탐색 한 걸음 재생과 미등록 화면 정지다. 결제·사용자 차례 정지는 단위 테스트만 통과했으며 실폰 검증 및 데모 영상은 아직 완료하지 않았다.
+- 자동 기록된 JSONL 발자국은 로컬 보관하도록 Git 제외. 화면 증거도 기존 `data/shots/`에 로컬 보관한다.
 - Swift 빌드에 plist·entitlements·로컬 JSON 파일의 미처리 파일 경고가 남아 있음. 빌드와 테스트 실패는 없음.
 
 ## 실폰 재생 검증 절차

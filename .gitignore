@@ -4,6 +4,8 @@ data/ledger.db*
 data/shots/
 data/*.log
 data/telemetry.jsonl
+# Local screen fingerprints; publish only reviewed, sanitized hub records.
+data/playbooks/*.jsonl
 # build products
 Ppomi/.build/
 Ppomi/.swiftpm/
