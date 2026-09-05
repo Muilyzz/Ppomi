@@ -25,7 +25,7 @@ struct PlaybookEntry: Identifiable {
     }
     var status: String { verified.isEmpty ? "재생 검증 전" : "성공 기록 \(verified.count)개 동작" }
     var installation: String { installed == "1" ? "설치 확인됨" : installed == "0" ? "미설치" : "설치 여부 미확인" }
-    var icon: String? { ["카카오뱅크": "KAKAO", "토스": "TOSS", "KB스타뱅킹": "KB", "케이뱅크": "KBANK"][app] }
+    var icon: String? { ["카카오뱅크": "KAKAO", "토스": "TOSS", "KB스타뱅킹": "KB", "케이뱅크": "KBANK", "여기어때": "YEOGI"][app] }
 }
 
 struct PlaybooksView: View {
@@ -82,12 +82,15 @@ struct PlaybooksView: View {
 
     private func icon(_ entry: PlaybookEntry) -> some View {
         Group {
-            if let name = entry.icon, let url = Web.bundle.url(forResource: name, withExtension: "png", subdirectory: "Web/icons"), let image = NSImage(contentsOf: url) {
+            if let name = entry.icon,
+               let url = Web.bundle.url(forResource: name, withExtension: "png", subdirectory: "Web/icons")
+                    ?? Web.bundle.url(forResource: name, withExtension: "jpg", subdirectory: "Web/icons"),
+               let image = NSImage(contentsOf: url) {
                 Image(nsImage: image).resizable().scaledToFit()
             } else {
-                Text(entry.app == "여기어때" ? "여기\n어때" : String(entry.app.prefix(2)))
-                    .font(.system(size: 14, weight: .heavy)).multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity).background(Color.pink.opacity(0.8))
+                Image(systemName: "app.dashed")
+                    .font(.system(size: 28)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }.frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityHidden(true)
     }
