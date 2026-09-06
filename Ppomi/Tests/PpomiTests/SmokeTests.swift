@@ -14,8 +14,8 @@ final class MirrorTests: XCTestCase {
     }
     @MainActor func testToggleKioskRoundTrip() {
         let s = AppState(); s.mirror = .connected
-        s.toggleKiosk(); XCTAssertEqual(s.phase, .humanUse(onScreen: true)); XCTAssertTrue(s.donut)
-        s.toggleKiosk(); XCTAssertEqual(s.phase, .idle); XCTAssertFalse(s.donut)
+        s.toggleKiosk(); XCTAssertEqual(s.phase, .humanUse(onScreen: true)); XCTAssertTrue(s.kioskOn)
+        s.toggleKiosk(); XCTAssertEqual(s.phase, .idle); XCTAssertFalse(s.kioskOn)
     }
     @MainActor func testShowEvidenceSwitchesTabInWindowAndKiosk() {
         let s = AppState()
@@ -27,10 +27,10 @@ final class MirrorTests: XCTestCase {
     }
     @MainActor func testKioskDonutIgnoresInUse() {
         let s = AppState(); s.mirroring(.inUse)
-        XCTAssertEqual(s.phase, .humanUse(onScreen: false)); XCTAssertFalse(s.donut)
-        s.toggleKiosk(); XCTAssertTrue(s.donut)
-        s.mirroring(.inUse); XCTAssertTrue(s.donut)
-        s.mirroring(.none); XCTAssertTrue(s.donut)
+        XCTAssertEqual(s.phase, .humanUse(onScreen: false)); XCTAssertFalse(s.kioskOn)
+        s.toggleKiosk(); XCTAssertTrue(s.kioskOn)
+        s.mirroring(.inUse); XCTAssertTrue(s.kioskOn)
+        s.mirroring(.none); XCTAssertTrue(s.kioskOn)
     }
 }
 

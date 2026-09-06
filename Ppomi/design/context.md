@@ -1,13 +1,17 @@
 # 뽀미(Ppomi) 디자인 작업 컨텍스트
 
 ## 앱이 무엇인가
-macOS 메뉴바 앱. iPhone 미러링 창(폰)을 검은 "링(도넛)" 안에 붙이고, 링의 왼쪽 띠에 작업대(웹 페이지 4개)를 둔다.
-- 창 모드: 제목줄 투명한 패널(RingContent.swift) = 위/아래/왼쪽/오른쪽 검은 띠 + 금색 테두리(#c7a300, 2px) + 오른쪽 구멍(폰 자리).
-- 키오스크 모드(⌃⌘F/초록 버튼): 같은 링이 화면 전체(Kiosk.swift, 4개 NSPanel). 폰은 화면 가운데 고정.
-- 작업대 = SwiftUI Workbench(Views/EvidenceView.swift): 상단 탭 줄(타임라인 · 증빙·전표 · 뽀미 · 절차 + 오른쪽 ⟳) 아래에 WKWebView 페이지.
-- 페이지: Web/timeline.html(순자산 차트+일별 재무상태표, Swift TimelineView가 JSON 주입), Web/evidence.html(OCR 증빙 열, HTML은 Ledger/Column.swift가 생성), Web/chat.html(Deep Chat 2.5.1 벤더, 승인 버튼, 하단 진행 상태줄), Web/playbooks.html(앱별 절차 = 콤보 칩 + 규칙).
-- 공통 CSS: Web/theme.css 가 Views/Web.swift 의 Web.page() 로 각 페이지의 /*THEME*/ 자리에 주입된다(방금 만든 빈 파일). 페이지별 스타일은 각 html 안에 있다.
-- 하단 띠: "나가기: 검은 부분 클릭 후 ×" 힌트(Kiosk.swift Ring.furnish). 위 띠: 신호등(창 모드) / × 표시(ExitMark, 클릭·Esc로 나타남).
+
+2026-09-06 현재 구현 기준. macOS 앱의 검은 작업대 창 하나가 iPhone 미러링 창 바로 뒤에 놓인다. 실제 미러링 창이 배경의 폰 영역을 덮으며, 작업대에 구멍을 뚫지 않는다.
+
+- 창: `Kiosk.swift`의 `MainPanel` 하나와 `Views/WorkbenchContent.swift`의 불투명 배경. 일반 창 레벨(`.normal`) 안에서 미러링 바로 뒤의 순서를 유지한다.
+- 키오스크: 같은 패널을 현재 화면의 `visibleFrame`까지 확대한다. 별도 Space, 네 개의 `.screenSaver` 패널, 시스템 UI 가리기, 전역 제스처 차단, 포커스 고정은 사용하지 않는다.
+- 전환: 초록 버튼 또는 `⌃⌘F`. 확대 중에는 **창으로 돌아가기** 버튼도 보인다. 원래 창 크기로 복귀해도 같은 창과 작업대 뷰를 유지한다. Dock 아이콘으로 다시 열어도 현재 모드를 유지한다.
+- 배치: 탭·포커스 전환만으로 폰을 옮기지 않는다. 뽀미 창 이동·크기 변경·모드 전환은 폰 배치를 맞춘다. 사람이 미러링을 직접 옮기면 일반 창은 배경이 따라가고, 확대 모드는 폰 위치에 맞춰 옆 열을 다시 배치한다.
+- 작업대: SwiftUI `Workbench`(`Views/EvidenceView.swift`)의 타임라인 · 증빙·전표 · 절차 탭. 타임라인과 증빙은 웹 뷰, 절차는 공통 카탈로그를 읽는 네이티브 `PlaybooksView`다.
+- 상태·승인: `PhoneBand`를 폰 옆 열 하단에 고정한다. 키가 큰 미러링 창에서도 상태 안내와 사람 승인 버튼이 폰 아래로 가려지지 않게 한다. 작업대 내용과는 별도 영역이므로 스크롤되지 않는다.
+- 배경·테두리: 배경은 검정. 폰 영역 테두리는 에이전트 작업 중 금색 2pt, 사람 차례 흰색 1pt, 대기 회색 1pt로 상태를 표시한다.
+- 공통 CSS: `Web/theme.css`를 `Views/Web.swift`의 `Web.page()`가 각 웹 페이지에 주입한다.
 - 사용자: 한국어 1인 개발자. 앱 문구는 한국어.
 
 ## 참고 디자인: https://www.agentation.com/
@@ -20,8 +24,7 @@ CSS 토큰(실측, 흰 배경 전체 페이지 기준):
 - 인상: 절제, 문서 같은 편집 디자인, 색은 링크 파랑 하나, 여백 넉넉, 장식 없음
 
 ## 제약
-- 링은 검정이어야 한다(폰 베젤과 이어지는 프레임). 금색 테두리는 정체성이지만 과용 중(탭 활성, 칩, 버튼, 승인까지 전부 금색).
+- 작업대 배경은 검정이어야 한다(폰 베젤과 이어지는 배경). 금색은 에이전트 작업 상태를 표시하는 폰 영역 테두리에 사용한다.
 - 다크가 기본(밤에 폰 옆에서 씀). 페이지 안에 밝은 종이 카드를 넣는 안도 후보로 검토 가능.
-- Deep Chat은 벤더 라이브러리: chat.html 의 messageStyles/textInput 등 설정으로만 스타일링.
 - 폰트: Inter는 로컬에 없을 수 있다 → -apple-system/Apple SD Gothic Neo 기본, 세리프는 Apple의 'New York'/Georgia 계열 가능. 외부 폰트 로드는 하지 않는다(오프라인).
-- 코드 규모: html 4개 총 ~280줄, Swift 뷰 ~330줄. 새 프레임워크·의존성 추가 금지. 최소 diff.
+- 기존 AppKit·SwiftUI·웹 뷰 구성 안에서 변경한다. 새 프레임워크·의존성은 추가하지 않는다.

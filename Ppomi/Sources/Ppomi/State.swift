@@ -1,4 +1,4 @@
-// The app's state: who has the phone, what the mirroring window reports, and the one derived value the screen needs (donut).
+// The app's state: who has the phone, what the mirroring window reports, and the workbench's content and size mode.
 import Foundation
 import Combine
 
@@ -18,7 +18,7 @@ final class AppState: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var mirror: MirrorState = .none
     @Published var pendingJob: String? = nil    // an agent job interrupted by the human picking the phone up; resumes on CONNECTED
-    @Published var kioskOn = false              // the person asked for the phone on the whole screen (humanUse(onScreen: true))
+    @Published var kioskOn = false              // the same workbench expanded to the screen's usable area
     @Published var phoneSize = Mirroring.defaultSize   // the mirroring window's size: the dock pane in the 뽀미 window is this big
     @Published var shown = 0                    // bumps when a menu item wants the 뽀미 window up (the controller owns it)
 
@@ -29,12 +29,12 @@ final class AppState: ObservableObject {
     @Published var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @Published var evidenceFocus: EvidenceFocus? = nil   // the 증빙·전표 window; nil until first open
     enum Tab { case timeline, evidence, playbooks }
-    @Published var tab: Tab = .timeline                  // what the workbench shows — the window and the kiosk band alike
+    @Published var tab: Tab = .timeline                  // what the workbench shows in either size mode
     @Published var voiceOn = false                       // the "뽀미야" listener (menu switch; this session only, not saved)
     @Published var listening = false                     // a voice conversation is open (after 뽀미야, until 그만 or 25 s quiet)
     @Published var heard = ""                            // the last thing the person said (voice transcript), second caption line
     @Published var said = ""                             // the last thing 뽀미 said, third caption line
-    /// A question from another process (the MCP server) or the voice session's tools, waiting for a button on the ring.
+    /// A question from another process (the MCP server) or the voice session's tools, waiting for a workbench button.
     @Published var ask: (id: String, text: String, options: [String])? = nil
     private var askDB: DB?, askTimer: Timer?, answered: String?   // answered: the id we already pressed, until askViaDB clears it
     @Published var greetOnArrival = true                 // 뽀미 speaks first when the phone reconnects (menu; state table "greet:on")
@@ -45,8 +45,8 @@ final class AppState: ObservableObject {
     func talk() { voiceToggle += 1 }
     func toggleGreet() { greetOnArrival.toggle(); try? askDB?.setState("greet:on", greetOnArrival ? "1" : "0") }
 
-    /// Poll the state table every second (Tools.askViaDB leaves questions there, `--voice` its trigger); a new question turns
-    /// the rim white and shows the window.
+    /// Poll the state table every second (Tools.askViaDB leaves questions there, `--voice` its trigger); a new question
+    /// highlights the approval area and shows the workbench in its current size mode.
     func watchAsks(dbPath: String = AppSettings.dbPath) {
         askTimer?.invalidate()
         do { askDB = try DB(path: dbPath, writable: true) } catch { print("ask: \(error)"); return }
@@ -63,10 +63,10 @@ final class AppState: ObservableObject {
         }
         guard ask?.id != q.id else { return }
         ask = (q.id, HTML.plain(q.html).replacingOccurrences(of: "\n", with: " · "), q.options)
-        if case .humanUse = phase {} else { phase = .humanTurn(reason: "승인 대기 · 폰 아래 버튼") }
-        if !kioskOn { reveal() }
+        if case .humanUse = phase {} else { phase = .humanTurn(reason: "승인 대기 · 작업대 하단 버튼") }
+        reveal()
     }
-    /// A button on the ring was pressed: the answer goes back through the state table.
+    /// An approval button was pressed: the answer goes back through the state table.
     func answer(_ text: String) {
         guard let a = ask, let db = askDB else { return }
         Tools.answer(db, id: a.id, text)
@@ -93,10 +93,6 @@ final class AppState: ObservableObject {
         ledgerVersion += 1
     }
 
-    /// The donut follows the kiosk switch only. Phase/IN_USE do not get a vote — that graph hid the ring
-    /// while the person was looking at the mirroring window (iPhone 사용 중).
-    var donut: Bool { kioskOn }
-
     /// The phone caption (bottom band) and the menu's first line.
     var statusLine: String {
         if listening { return "대화 중 · " + phaseLine }
@@ -122,7 +118,7 @@ final class AppState: ObservableObject {
         switch phase { case .idle: return "circle"; case .agent: return "circle.fill"; case .humanTurn: return "hand.raised.fill"; case .humanUse: return "iphone" }
     }
 
-    /// Menu, green zoom, ⌃⌘F, and the kiosk's press-to-exit. The donut is this bit; phase is only the status line.
+    /// Menu, green zoom, and ⌃⌘F switch the workbench size. Phone use does not hide or collapse the workbench.
     func toggleKiosk() {
         kioskOn.toggle()
         if kioskOn { phase = .humanUse(onScreen: true) }

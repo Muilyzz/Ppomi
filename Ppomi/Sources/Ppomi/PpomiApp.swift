@@ -1,19 +1,18 @@
-// 뽀미: menu bar app. Owns the one AppState, the mirroring watcher that feeds it, the kiosk that follows state.donut, and the
+// 뽀미: menu bar app. Owns the one AppState, the mirroring watcher that feeds it, the workbench that follows state.kioskOn, and the
 // voice session (the wake word and the realtime client). The brain is outside (`--mcp`); this process is the console.
 import SwiftUI
 import AppKit
 
 /// A SwiftPM executable has no app bundle, so LaunchServices starts it background-only (.prohibited): claim .regular at
 /// launch for a Dock icon and a place in ⌘Tab. The 뽀미 window is the controller's panel (see Kiosk.swift); its green
-/// button is the kiosk, not macOS fullscreen (a new Space that fights the donut).
+/// button expands that same window beneath iPhone Mirroring without entering a separate fullscreen Space.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static var pendingState: AppState?
     var state: AppState?
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // Settings can be visible while the controller's panel is closed. Always reveal the workbench outside kiosk;
-        // revealing in kiosk would move its shared view back into the window and leave the kiosk band empty.
-        if let state = state ?? Self.pendingState, !state.kioskOn { state.reveal() }
+        // Settings can be visible while the workbench is closed. Reopen the same panel in its current size mode.
+        (state ?? Self.pendingState)?.reveal()
         return false                                    // the controller owns reopening; AppKit must not open another window
     }
 
@@ -28,7 +27,7 @@ struct PpomiApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var state: AppState
     private let watcher: MirrorWatcher
-    private let kiosk: KioskController                    // kept for the app's life; it observes state and builds/tears itself
+    private let kiosk: KioskController                    // app-long owner of the workbench and its two size modes
     private let voice: VoiceSession?                      // app-long too: a tab must not take the microphone down with it
 
     init() {
@@ -51,12 +50,12 @@ struct PpomiApp: App {
         _state = StateObject(wrappedValue: s)
         s.reloadLedger()
         kiosk = KioskController(state: s)
-        s.watchAsks()                                   // questions from the MCP server / the voice tools → buttons on the ring
+        s.watchAsks()                                   // questions from the MCP server / the voice tools → workbench buttons
         do { voice = try VoiceSession(state: s) } catch { voice = nil; print("voice: \(error)") }
         watcher = MirrorWatcher { s.mirroring($0) }
         watcher.start()
         AppDelegate.pendingState = s
-        // `--kiosk`: come up staged, for the parents' Mac (login item). After launch: panels made during init are not wired for events.
+        // `--kiosk`: expand the workbench on launch. Defer until AppKit has wired the panel for events.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { CommandLine.arguments.contains("--kiosk") ? s.toggleKiosk() : s.reveal() }
         // `--snapshot [APP …]`: collect and exit, no UI (launchd / cron / a terminal). Default: every app.
         if let i = CommandLine.arguments.firstIndex(of: "--snapshot") {
@@ -89,7 +88,7 @@ struct PpomiApp: App {
     }
 }
 
-/// The menu bar item's menu: tabs, ring size, collection.
+/// The menu bar item's menu: tabs, workbench size, collection.
 private struct MenuContent: View {
     @EnvironmentObject var state: AppState
 
@@ -116,6 +115,6 @@ private struct MenuContent: View {
         Button("종료") { NSApplication.shared.terminate(nil) }
     }
 
-    /// Pick a tab; bring the window up unless the kiosk band already shows it.
-    private func show(_ t: AppState.Tab) { state.show(t); if !state.kioskOn { state.reveal() } }
+    /// Pick a tab and reveal the same workbench in either size mode.
+    private func show(_ t: AppState.Tab) { state.show(t); state.reveal() }
 }

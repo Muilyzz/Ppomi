@@ -533,7 +533,7 @@ final class Tools {
                 if a["x"] == nil { record(from == nil ? "⊙" : "↓", str("text"), before: from) }   // a coordinate tap has no target to replay
                 return "탭했다. phone_screen 으로 결과를 확인하라."
             case "confirm_payment":
-                guard let ask = askOwner else { return "승인 채널이 없다(링 버튼이나 MCP 엘리시테이션이 있어야 결제할 수 있다)." }
+                guard let ask = askOwner else { return "승인 채널이 없다(작업대의 승인 버튼이나 MCP 엘리시테이션이 있어야 결제할 수 있다)." }
                 let amount = (a["amount"] as? Int) ?? Int(str("amount")) ?? 0
                 guard amount > 0 else { return "금액이 없다. 결제 화면의 금액을 읽어 amount 에 넣어라." }
                 let html = "💳 <b>결제 승인 요청</b>\n\(esc(str("summary")))\n금액 \(HTML.won(amount)) · \(esc(str("method")))\n승인하면 결제 버튼을 누르고, 폰에서 인증을 요청합니다."

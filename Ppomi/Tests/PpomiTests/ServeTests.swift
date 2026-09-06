@@ -93,7 +93,7 @@ final class ServeTests: XCTestCase {
         wait(for: [shown], timeout: 5)                                       // the run loop turns: the 1.5 s poll fires
         let q = try XCTUnwrap(s.ask)
         XCTAssertEqual(q.text, "💳 결제? · 1,000원"); XCTAssertEqual(q.options, ["결제 승인 1,000원", "취소"])
-        XCTAssertEqual(s.phase, .humanTurn(reason: "승인 대기 · 폰 아래 버튼"))
+        XCTAssertEqual(s.phase, .humanTurn(reason: "승인 대기 · 작업대 하단 버튼"))
         s.answer("취소")
         XCTAssertNil(s.ask); XCTAssertEqual(s.phase, .idle)
         wait(for: [done], timeout: 5)

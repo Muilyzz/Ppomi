@@ -17,8 +17,8 @@ final class AppDelegateTests: XCTestCase {
         }
     }
 
-    /// Revealing the window in kiosk would remount the one shared workbench away from the kiosk.
-    @MainActor func testReopenPreservesKioskAndDoesNotRevealWindow() {
+    /// The expanded workbench is the same panel, so a Dock click must reveal it without changing its size mode.
+    @MainActor func testReopenRevealsWorkbenchAndPreservesKiosk() {
         for visible in [false, true] {
             let state = AppState()
             state.show(.playbooks)
@@ -27,7 +27,7 @@ final class AppDelegateTests: XCTestCase {
             delegate.state = state
 
             XCTAssertFalse(delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: visible))
-            XCTAssertEqual(state.shown, 0)
+            XCTAssertEqual(state.shown, 1)
             XCTAssertTrue(state.kioskOn)
             XCTAssertEqual(state.phase, .humanUse(onScreen: true))
             XCTAssertEqual(state.tab, .playbooks)
