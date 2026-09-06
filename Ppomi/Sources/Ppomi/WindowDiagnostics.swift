@@ -35,7 +35,7 @@ enum WindowDiagnostics {
 
     static func isMouseBoundary(_ event: NSEvent) -> Bool {
         switch event.type {
-        case .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp: return true
+        case .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel: return true
         default: return false
         }
     }
@@ -44,13 +44,25 @@ enum WindowDiagnostics {
         guard enabled, isMouseBoundary(event) else { return }
         let content = panel.contentView
         let hit = content?.hitTest(content?.convert(event.locationInWindow, from: nil) ?? .zero)
+        var ancestry: [String] = []
+        var ancestor = hit
+        while let view = ancestor, ancestry.count < 10 {
+            ancestry.append(NSStringFromClass(type(of: view)))
+            ancestor = view.superview
+        }
         var fields: [String: Any] = [
             "mouseType": event.type.rawValue,
             "mouseEvent": event.eventNumber,
             "hitView": hit.map { NSStringFromClass(type(of: $0)) } ?? "none",
             "needsPanelKey": hit?.needsPanelToBecomeKey ?? false,
             "acceptsFirstResponder": hit?.acceptsFirstResponder ?? false,
+            "hitAncestry": ancestry,
+            "mouseCanMoveWindow": hit?.mouseDownCanMoveWindow ?? false,
         ]
+        if event.type == .scrollWheel {
+            fields["scrollPhase"] = event.phase.rawValue
+            fields["momentumPhase"] = event.momentumPhase.rawValue
+        }
         // AppKit invokes this callback before mouseDown. Never query it here: doing so could change the behavior observed.
         if let delayed = delayedOrdering[event.eventNumber] { fields["delayWindowOrdering"] = delayed }
         else { fields["delayWindowOrdering"] = "unobserved" }

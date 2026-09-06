@@ -64,6 +64,37 @@ enum Mirroring {
     static func axWindow() -> AXUIElement? { axWindowAndFrame()?.0 }
     static func axFrame() -> CGRect? { axWindowAndFrame()?.1 }
 
+    /// Explicit reveal also needs to find a minimized or parked window that CG does not currently list as live.
+    private static func primaryAXWindow(in application: AXUIElement) -> AXUIElement? {
+        for name in [kAXMainWindowAttribute, kAXFocusedWindowAttribute] {
+            if let value = attr(application, name), CFGetTypeID(value) == AXUIElementGetTypeID() {
+                return (value as! AXUIElement)
+            }
+        }
+        let windows = (attr(application, kAXWindowsAttribute) as? [AXUIElement]) ?? []
+        func area(_ window: AXUIElement) -> CGFloat {
+            guard let value = attr(window, kAXSizeAttribute), CFGetTypeID(value) == AXValueGetTypeID() else { return 0 }
+            var size = CGSize.zero
+            guard AXValueGetValue(value as! AXValue, .cgSize, &size) else { return 0 }
+            return max(0, size.width) * max(0, size.height)
+        }
+        return windows.max { area($0) < area($1) }
+    }
+
+    /// Read-only verification for explicit reveal and its subsequent transition. Does not activate either app.
+    static func isInFrontOfOtherApplications(_ phoneID: CGWindowID) -> Bool {
+        guard let pid = app()?.processIdentifier else { return false }
+        let list = (CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]]) ?? []
+        let windows = list.compactMap { window -> MirroringOrder.Window? in
+            guard let id = window[kCGWindowNumber as String] as? UInt32,
+                  let owner = window[kCGWindowOwnerPID as String] as? pid_t,
+                  let layer = window[kCGWindowLayer as String] as? Int else { return nil }
+            return .init(id: id, owner: owner, layer: layer)
+        }
+        return MirroringOrder.isInFront(phoneID: phoneID, phonePID: pid,
+                                         ppomiPID: ProcessInfo.processInfo.processIdentifier, windows: windows)
+    }
+
     // MARK: placement
 
     /// The screen a CG rect lies on (AppKit screens have a bottom-left origin; CG has top-left of the main display).
@@ -118,6 +149,29 @@ enum Mirroring {
             if i < steps { usleep(100_000) }
         }
         return false
+    }
+
+    /// Only for an explicit Dock/menu reveal. A live CG window may still be behind another application.
+    /// Try raising that window without changing application focus; activate once only if it remains buried or parked.
+    @discardableResult
+    static func revealWindow() -> Bool {
+        guard trusted("revealWindow"), let running = app() else { return false }
+        if running.isHidden { running.unhide() }
+        let application = AXUIElementCreateApplication(running.processIdentifier)
+        if let window = primaryAXWindow(in: application) {
+            if (attr(window, kAXMinimizedAttribute) as? Bool) == true {
+                var settable: DarwinBoolean = false
+                if AXUIElementIsAttributeSettable(window, kAXMinimizedAttribute as CFString, &settable) == .success,
+                   settable.boolValue {
+                    AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+                }
+            }
+            AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        }
+        if let phone = liveWindow(), isInFrontOfOtherApplications(phone.id) { return true }
+        _ = stage()
+        guard let phone = liveWindow() else { return false }
+        return isInFrontOfOtherApplications(phone.id)
     }
 
     // MARK: state, read from the window's accessibility tree

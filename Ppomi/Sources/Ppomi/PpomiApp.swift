@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         // Settings can be visible while the workbench is closed. Reopen the same panel in its current size mode.
+        WindowDiagnostics.log("app.reopen", ["hasVisibleWindows": flag])
         (state ?? Self.pendingState)?.reveal()
         return false                                    // the controller owns reopening; AppKit must not open another window
     }

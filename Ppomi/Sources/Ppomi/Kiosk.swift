@@ -128,6 +128,8 @@ final class KioskController {
     private var savedFrame: CGRect?
     private var lastDock: DockSnapshot?
     private var mirrorPresence = MirrorPresence()
+    private var awaitingPresentedPhone = false
+    private var explicitRevealUntil: TimeInterval = 0
     private var placementRequested = false
     private(set) var up = false
 
@@ -213,11 +215,21 @@ final class KioskController {
         wantMain = true
         guard let p = main, let c = content else { return }
         if first { Self.fitMain(p, content: c, phoneSize: state.phoneSize); placementRequested = true }
-        // Only an explicit request to show the workbench may retrieve a parked mirroring window.
-        if stage, Permissions.accessibility, Mirroring.app() != nil, Mirroring.liveWindow() == nil {
-            Mirroring.stage()
+        // A live window can still be buried behind another app. Explicit reopen raises the pair first;
+        // ordinary clicks and the docking timer never enter this path.
+        if stage {
+            WindowDiagnostics.panel("reveal.request", p)
+            NSApp.unhideWithoutActivation()
+            if p.isMiniaturized { p.deminiaturize(nil) }
+            let presented = Permissions.accessibility && Mirroring.revealWindow()
+            awaitingPresentedPhone = !presented
+            if !presented { lastDock = nil }
+            explicitRevealUntil = ProcessInfo.processInfo.systemUptime + 2
+            p.phoneID = presented ? Mirroring.liveWindow()?.id : nil
+            WindowDiagnostics.panel("reveal.presented", p, fields: ["phonePresented": presented])
+        } else {
+            p.phoneID = Mirroring.liveWindow()?.id
         }
-        p.phoneID = Mirroring.liveWindow()?.id
         c.layoutSubtreeIfNeeded()
         p.orderFront(nil)
     }
@@ -294,6 +306,7 @@ final class KioskController {
     /// Maintain relative order without raising/activating the phone. Ignore transient Stage Manager animation frames.
     private func dock() {
         guard wantMain, let p = main, let c = content else { return }
+        guard !NSApp.isHidden else { return }
         guard Permissions.accessibility else {
             p.phoneID = nil; lastDock = nil
             c.phoneSlot.hint = "미러링 창을 붙이려면\n설정 › 시작하기에서 손쉬운 사용을 허용해 주세요"
@@ -301,6 +314,15 @@ final class KioskController {
             return
         }
         let livePhone = Mirroring.liveWindow()
+        if awaitingPresentedPhone {
+            // A failed/unfinished reveal must leave the workbench accessible on its own, rather than
+            // immediately tucking it under the same buried window on the next timer tick.
+            guard let phone = livePhone, Mirroring.isInFrontOfOtherApplications(phone.id) else {
+                if !p.isVisible { p.orderFront(nil) }
+                return
+            }
+            awaitingPresentedPhone = false
+        }
         let presence = mirrorPresence.observe(appRunning: Mirroring.app() != nil,
                                                hasLiveWindow: livePhone != nil,
                                                hasAssociation: p.phoneID != nil,
@@ -312,7 +334,8 @@ final class KioskController {
             p.phoneID = nil; lastDock = nil
             c.phoneSlot.hint = "iPhone 미러링을 연결해 주세요"
             // Follow the phone off stage without pulling the user back from another app or Space.
-            if Mirroring.app() != nil, !NSApp.isActive, !p.isKeyWindow {
+            if Mirroring.app() != nil, !NSApp.isActive, !p.isKeyWindow,
+               ProcessInfo.processInfo.systemUptime >= explicitRevealUntil {
                 WindowDiagnostics.panel("dock.hide", p)
                 p.orderOut(nil)
             }

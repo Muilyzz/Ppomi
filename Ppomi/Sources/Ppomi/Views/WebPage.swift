@@ -21,7 +21,10 @@ struct WebPage: NSViewRepresentable {
     func updateNSView(_ v: WKWebView, context: Context) {
         let c = context.coordinator
         c.focus = focus; c.onMessage = onMessage; c.onReady = onReady
-        if c.html != html { c.html = html; c.loaded = false; v.loadHTMLString(html, baseURL: nil) }
+        if c.html != html {
+            WindowDiagnostics.log("web.load", ["bytes": html.utf8.count])
+            c.html = html; c.loaded = false; v.loadHTMLString(html, baseURL: nil)
+        }
         else if c.loaded { c.apply(v) }
     }
     static func dismantleNSView(_ v: WKWebView, coordinator: Coordinator) {
@@ -37,7 +40,10 @@ struct WebPage: NSViewRepresentable {
             applied = focus
             v.evaluateJavaScript("typeof focus==='function'&&focus(\(focus.map { "'\($0)'" } ?? "null"))")
         }
-        func webView(_ v: WKWebView, didFinish: WKNavigation!) { loaded = true; applied = nil; apply(v); onReady?(v) }
+        func webView(_ v: WKWebView, didFinish: WKNavigation!) {
+            WindowDiagnostics.log("web.ready")
+            loaded = true; applied = nil; apply(v); onReady?(v)
+        }
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) { onMessage?(m.body) }
     }
 }

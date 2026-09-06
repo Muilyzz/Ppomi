@@ -12,33 +12,46 @@ enum Timeline {
     }
 
     static func html(_ L: Ledger) -> String {
-        let json = String(data: try! JSONSerialization.data(withJSONObject: data(L)), encoding: .utf8)!   // "/" is escaped: no "</script>" can leak
+        let json = String(data: try! JSONSerialization.data(withJSONObject: data(L), options: .sortedKeys), encoding: .utf8)!   // "/" is escaped: no "</script>" can leak
         let tpl = Web.page("timeline")
         return tpl.replacingOccurrences(of: "/*TIMELINE*/null", with: json)
+    }
+
+    /// The page posts its initial day after loading. An unchanged day must not invalidate the page again.
+    @MainActor static func receive(_ message: Any, state: AppState) {
+        guard let message = message as? [String: Any] else { return }
+        let day = (message["day"] as? String).flatMap { TS.parse($0 + " 00:00") }
+        if let day, state.selectedDay != day { state.selectedDay = day }
+        if let uid = message["evidence"] as? String {
+            state.showEvidence(day: day, uid: uid)
+        }
     }
 }
 
 struct TimelineView: View {
     @EnvironmentObject var state: AppState
+    @State private var html: String?
+    @State private var renderedVersion: Int?
 
     var body: some View {
         Group {
-            if let L = state.ledger { WebPage(html: Timeline.html(L), onMessage: handle) }
+            if let html { WebPage(html: html, onMessage: { Timeline.receive($0, state: state) }) }
             else {
                 ContentUnavailableView(state.ledgerError == nil ? "장부 없음 · 설정에서 경로 확인" : "장부를 읽지 못함",
                                        systemImage: "book.closed", description: Text(state.ledgerError ?? AppSettings.dbPath))
             }
         }
-        .onAppear { if state.ledger == nil { state.reloadLedger() } }
+        .onAppear {
+            if state.ledger == nil { state.reloadLedger() }
+            rebuild()
+        }
+        .onChange(of: state.ledgerVersion) { _, _ in rebuild() }
     }
 
-    /// {day: "YYYY-MM-DD"} follows the page's selected day; {evidence: uid} opens that voucher's 증빙.
-    private func handle(_ m: Any) {
-        guard let m = m as? [String: Any] else { return }
-        let day = (m["day"] as? String).flatMap { TS.parse($0 + " 00:00") }
-        if let day { state.selectedDay = day }
-        if let uid = m["evidence"] as? String {
-            state.showEvidence(day: day, uid: uid)
-        }
+    /// Keep the DOM, selected range, and scroll position intact while unrelated app state changes.
+    private func rebuild() {
+        guard renderedVersion != state.ledgerVersion else { return }
+        html = state.ledger.map(Timeline.html)
+        renderedVersion = state.ledgerVersion
     }
 }
