@@ -8,8 +8,38 @@ import CoreGraphics
 
 /// Navigation leaves the mirroring app active; every explicit raise stays directly behind its window.
 final class MainPanel: NSPanel {
-    var phoneID: CGWindowID?
+    var phoneID: CGWindowID? {
+        didSet {
+            if WindowDiagnostics.enabled, oldValue != phoneID { diagnosticSampler?.updateMirrorPID(Mirroring.app()?.processIdentifier) }
+        }
+    }
     private var kioskAction: (() -> Void)?
+    private var diagnosticSampler: WindowDiagnosticsSampler?
+
+    func startWindowDiagnostics() {
+        guard WindowDiagnostics.enabled, diagnosticSampler == nil else { return }
+        diagnosticSampler = WindowDiagnosticsSampler(panelID: CGWindowID(windowNumber), mirrorPID: Mirroring.app()?.processIdentifier)
+        WindowDiagnostics.panel("trace.started", self)
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        guard WindowDiagnostics.enabled, WindowDiagnostics.isMouseBoundary(event) else { super.sendEvent(event); return }
+        WindowDiagnostics.mouse("before", event: event, panel: self)
+        super.sendEvent(event)
+        WindowDiagnostics.mouse("after", event: event, panel: self)
+    }
+
+    override func becomeKey() {
+        WindowDiagnostics.panel("key.become.before", self)
+        super.becomeKey()
+        WindowDiagnostics.panel("key.become.after", self)
+    }
+
+    override func resignKey() {
+        WindowDiagnostics.panel("key.resign.before", self)
+        super.resignKey()
+        WindowDiagnostics.panel("key.resign.after", self)
+    }
 
     /// Bind the button's semantic action so mouse clicks, accessibility presses, and performZoom agree.
     /// The controller supplies its state directly; no application-delegate launch ordering is required.
@@ -27,13 +57,18 @@ final class MainPanel: NSPanel {
     }
 
     override func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
+        WindowDiagnostics.panel("order.before", self, fields: ["mode": place.rawValue,
+            "relativeTo": phoneID.map { Int($0) == otherWin } == true ? "phone" : otherWin == 0 ? "default" : "other"])
         if place == .above, let p = phoneID { super.order(.below, relativeTo: Int(p)) }
         else { super.order(place, relativeTo: otherWin) }
+        WindowDiagnostics.panel("order.after", self)
     }
     override func orderFront(_ sender: Any?) {
+        WindowDiagnostics.panel("orderFront", self)
         if let p = phoneID { order(.below, relativeTo: Int(p)) } else { super.orderFront(sender) }
     }
     override func orderFrontRegardless() {
+        WindowDiagnostics.panel("orderFrontRegardless", self)
         if let p = phoneID { order(.below, relativeTo: Int(p)) } else { super.orderFrontRegardless() }
     }
     override func makeKeyAndOrderFront(_ sender: Any?) { makeKey(); orderFront(sender) }
@@ -92,12 +127,14 @@ final class KioskController {
     private var keyMonitors: [Any] = []
     private var savedFrame: CGRect?
     private var lastDock: DockSnapshot?
+    private var mirrorPresence = MirrorPresence()
     private var placementRequested = false
     private(set) var up = false
 
     init(state: AppState) {
         self.state = state
-        workbench = NSHostingView(rootView: Workbench().environmentObject(state))
+        let rootView = Workbench().environmentObject(state)
+        workbench = WindowDiagnostics.enabled ? DiagnosticHostingView(rootView: rootView) : WorkbenchHostingView(rootView: rootView)
         workbench.autoresizingMask = [.width, .height]
         sub = state.objectWillChange.sink { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.sync() } }
@@ -162,6 +199,7 @@ final class KioskController {
         p.contentView = c
         p.bindKioskButton { [weak self] in self?.state.toggleKiosk() }
         p.center()
+        p.startWindowDiagnostics()
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: p, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.wantMain = false }
         }
@@ -262,18 +300,32 @@ final class KioskController {
             if !p.isVisible { p.orderFront(nil) }
             return
         }
-        guard let phone = Mirroring.liveWindow() else {
+        let livePhone = Mirroring.liveWindow()
+        let presence = mirrorPresence.observe(appRunning: Mirroring.app() != nil,
+                                               hasLiveWindow: livePhone != nil,
+                                               hasAssociation: p.phoneID != nil,
+                                               now: ProcessInfo.processInfo.systemUptime)
+        // Stage Manager can briefly report only a thumbnail while handling a click. Keep the pairing during that gap.
+        if presence == .transient { return }
+        guard let phone = livePhone else {
+            WindowDiagnostics.panel("dock.noLiveWindow", p)
             p.phoneID = nil; lastDock = nil
             c.phoneSlot.hint = "iPhone 미러링을 연결해 주세요"
             // Follow the phone off stage without pulling the user back from another app or Space.
-            if Mirroring.app() != nil, !NSApp.isActive, !p.isKeyWindow { p.orderOut(nil) }
+            if Mirroring.app() != nil, !NSApp.isActive, !p.isKeyWindow {
+                WindowDiagnostics.panel("dock.hide", p)
+                p.orderOut(nil)
+            }
             else if !p.isVisible { p.orderFront(nil) }
             return
         }
         guard let frame = Mirroring.axFrame(), DockChange.near(frame, phone.rect) else { return }
         p.phoneID = phone.id
         if !p.isVisible { p.orderFront(nil) }
-        else if p.needsReorder(under: phone.id) { p.order(.below, relativeTo: Int(phone.id)) }
+        else if p.needsReorder(under: phone.id) {
+            WindowDiagnostics.panel("dock.reorder", p)
+            p.order(.below, relativeTo: Int(phone.id))
+        }
         c.phoneSlot.hint = ""
         let current = DockSnapshot(phoneID: phone.id, panel: cgRect(p.frame), phone: frame)
         let change = DockChange.between(lastDock, and: current, explicitLayout: placementRequested)
@@ -284,6 +336,7 @@ final class KioskController {
             if !up { Self.fitMain(p, content: c, phoneSize: frame.size) }
         }
         if change == .alignPhone {
+            WindowDiagnostics.panel("dock.alignPhone", p, fields: ["explicitLayout": placementRequested])
             c.followedPhone = nil
             c.layoutSubtreeIfNeeded()
             let target = phoneTarget(p, c)

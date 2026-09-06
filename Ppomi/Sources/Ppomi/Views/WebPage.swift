@@ -13,7 +13,7 @@ struct WebPage: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
         cfg.userContentController.add(context.coordinator, name: "ppomi")
-        let v = WKWebView(frame: .zero, configuration: cfg)
+        let v = WorkbenchWebView(frame: .zero, configuration: cfg)
         v.underPageBackgroundColor = .black                // no white flash before the page paints
         v.navigationDelegate = context.coordinator
         return v

@@ -1,12 +1,12 @@
 // A solid workbench surface behind iPhone Mirroring. There is no cutout and no separate surrounding windows.
 import AppKit
 
-final class WorkbenchContent: NSView {
+final class WorkbenchContent: WorkbenchSurface {
     static let rimTop: CGFloat = 32, rimBottom: CGFloat = 96, rimRight: CGFloat = 32, bandMin: CGFloat = 560
-    let workbenchArea = NSView()
+    let workbenchArea = WorkbenchSurface()
     let phoneSlot = DockView()
     let band = PhoneBand()
-    private let exitButton = NSButton(title: "창으로 돌아가기", target: nil, action: nil)
+    private let exitButton = WorkbenchButton(title: "창으로 돌아가기", target: nil, action: nil)
     weak var workbench: NSView?
     var onExitExpanded: (() -> Void)?
     var expanded = false { didSet { needsLayout = true; exitButton.isHidden = !expanded } }
@@ -67,12 +67,12 @@ final class WorkbenchContent: NSView {
 }
 
 /// Status and human approval controls, kept in the same backing window in both modes.
-final class PhoneBand: NSView {
+final class PhoneBand: WorkbenchSurface {
     weak var state: AppState?
-    private let question = NSTextField(labelWithString: "")
-    private let buttons = NSStackView()
-    private let clock = NSTextField(labelWithString: "")
-    private let caption = NSTextField(wrappingLabelWithString: "")
+    private let question = WorkbenchLabel(labelWithString: "")
+    private let buttons = WorkbenchStack()
+    private let clock = WorkbenchLabel(labelWithString: "")
+    private let caption = WorkbenchLabel(wrappingLabelWithString: "")
     private var askID: String?, deadline = Date(), timer: Timer?
     static let lineHeight: CGFloat = 16
 
@@ -126,7 +126,7 @@ final class PhoneBand: NSView {
             question.stringValue = s.ask?.text ?? ""
             if let a = s.ask {
                 for (i, o) in a.options.enumerated() {
-                    let b = NSButton(title: o, target: self, action: #selector(pressed(_:)))
+                    let b = WorkbenchButton(title: o, target: self, action: #selector(pressed(_:)))
                     b.bezelStyle = .rounded; b.controlSize = .regular; b.tag = i
                     b.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
                     b.lineBreakMode = .byTruncatingTail
@@ -180,7 +180,7 @@ final class PhoneBand: NSView {
 }
 
 /// A placeholder behind the real phone window, visible while it is disconnected.
-final class DockView: NSView {
+final class DockView: WorkbenchSurface {
     var hint = "" { didSet { if hint != oldValue { needsDisplay = true } } }
     override func draw(_ dirty: NSRect) {
         NSColor.black.setFill(); bounds.fill()
