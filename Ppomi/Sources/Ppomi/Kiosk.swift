@@ -1,6 +1,5 @@
-// One normal-level workbench window, immediately behind iPhone Mirroring in both size modes.
-// Expanded mode resizes this same panel on the current desktop. It does not create a Space, seize focus,
-// suppress gestures, or cover system UI. Only deliberate workbench geometry changes reposition the phone.
+// A normal workbench stays directly behind iPhone Mirroring. Immersive mode lends its existing views to
+// elevated covers around the phone on the current display, without moving or repeatedly activating the phone.
 import AppKit
 import SwiftUI
 import Combine
@@ -121,10 +120,13 @@ final class KioskController {
     private var sub: AnyCancellable?
     private var main: MainPanel?
     private var content: WorkbenchContent?
+    private var immersive: ImmersiveKiosk?
     private var wantMain = false
     private var lastShown = 0
     private var tick: Timer?
     private var keyMonitors: [Any] = []
+    private var displayObservers: [(NotificationCenter, NSObjectProtocol)] = []
+    private var revealPhoneOnExit = true
     private var savedFrame: CGRect?
     private var lastDock: DockSnapshot?
     private var mirrorPresence = MirrorPresence()
@@ -142,31 +144,77 @@ final class KioskController {
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.sync() } }
         }
         let t = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.dock() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.up { self.updateImmersive() } else { self.dock() }
+            }
         }
         RunLoop.main.add(t, forMode: .common); tick = t
         keyMonitors = [
             NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] e in
                 MainActor.assumeIsolated {
-                    guard let self, self.main?.isVisible == true,
+                    guard let self else { return }
+                    if self.up {
+                        if Self.isFullscreenChord(e) { if !e.isARepeat { self.state.toggleKiosk() } }
+                        else { self.immersive?.handleKey(e) }
+                        return
+                    }
+                    guard self.main?.isVisible == true,
                           NSWorkspace.shared.frontmostApplication?.bundleIdentifier == Mirroring.bundleID,
                           Self.isFullscreenChord(e) else { return }
-                    self.state.toggleKiosk()
+                    if !e.isARepeat { self.state.toggleKiosk() }
                 }
             },
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-                guard let self, let main = self.main, e.window === main,
+                guard let self else { return e }
+                if self.up {
+                    if Self.isFullscreenChord(e) {
+                        if !e.isARepeat { DispatchQueue.main.async { self.state.toggleKiosk() } }
+                        return nil
+                    }
+                    self.immersive?.handleKey(e)
+                    return e.keyCode == 53 ? nil : e
+                }
+                guard let main = self.main, e.window === main,
                       Self.isFullscreenChord(e) else { return e }
-                DispatchQueue.main.async { self.state.toggleKiosk() }
+                if !e.isARepeat { DispatchQueue.main.async { self.state.toggleKiosk() } }
                 return nil
             },
         ].compactMap { $0 }
+        // Covers belong to one desktop/display. Leaving it must never strand an exit button elsewhere
+        // or pull the person back to the phone's former Space.
+        for (center, name) in [(NSWorkspace.shared.notificationCenter, NSWorkspace.activeSpaceDidChangeNotification),
+                               (NotificationCenter.default, NSApplication.didChangeScreenParametersNotification)] {
+            let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, self.up, self.state.kioskOn else { return }
+                    self.revealPhoneOnExit = false
+                    self.state.toggleKiosk()
+                }
+            }
+            displayObservers.append((center, token))
+        }
+        let dialogToken = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification,
+                                                                   object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated {
+                guard let self, self.up, self.state.kioskOn, let window = note.object as? NSWindow,
+                      window !== self.main, self.immersive?.contains(window) != true else { return }
+                // A file picker or settings window must be reachable above the workbench.
+                self.revealPhoneOnExit = false
+                self.state.toggleKiosk()
+                // runModal() uses a nested event loop; remove the covers before returning to it,
+                // without depending on the asynchronously scheduled state subscriber.
+                self.setExpanded(false)
+            }
+        }
+        displayObservers.append((NotificationCenter.default, dialogToken))
         sync()
     }
 
     deinit {
         tick?.invalidate()
         keyMonitors.forEach(NSEvent.removeMonitor)
+        displayObservers.forEach { $0.0.removeObserver($0.1) }
     }
 
     private func sync() {
@@ -214,6 +262,14 @@ final class KioskController {
         if first { main = makeMain() }
         wantMain = true
         guard let p = main, let c = content else { return }
+        if up {
+            if stage {
+                NSApp.unhideWithoutActivation()
+                if Permissions.accessibility { _ = Mirroring.revealWindow() }
+            }
+            updateImmersive()
+            return
+        }
         if first { Self.fitMain(p, content: c, phoneSize: state.phoneSize); placementRequested = true }
         // A live window can still be buried behind another app. Explicit reopen raises the pair first;
         // ordinary clicks and the docking timer never enter this path.
@@ -234,15 +290,31 @@ final class KioskController {
         p.orderFront(nil)
     }
 
-    /// Change only the existing panel's geometry; its content and window number remain the same.
+    /// Move the same view objects between hosts, preserving the timeline page and pending human approval.
     private func setExpanded(_ expanded: Bool) {
         if main == nil { showMain(stage: false) }
         guard let p = main, let c = content else { return }
         if expanded {
+            guard let screen = p.screen ?? NSScreen.main else { return }
             savedFrame = p.frame
-            let screen = p.screen ?? NSScreen.main
-            Self.fitExpanded(p, content: c, in: screen?.visibleFrame ?? p.frame)
+            c.layoutSuspended = true
+            p.orderOut(nil)
+            up = true
+            if immersive == nil {
+                immersive = ImmersiveKiosk(workbench: workbench, band: c.band) { [weak self] in
+                    guard let self, self.state.kioskOn else { return }
+                    self.state.toggleKiosk()
+                }
+            }
+            if Permissions.accessibility { _ = Mirroring.revealWindow() }
+            immersive?.show(on: screen, phone: immersivePhoneFrame())
+            WindowDiagnostics.panel("immersive.enter", p)
         } else {
+            immersive?.hide()
+            up = false
+            c.workbenchArea.addSubview(workbench)
+            c.addSubview(c.band)
+            c.layoutSuspended = false
             c.expanded = false
             c.followedPhone = nil
             p.contentMinSize = .zero
@@ -250,11 +322,27 @@ final class KioskController {
             if let savedFrame { p.setFrame(savedFrame, display: true) }
             Self.fitMain(p, content: c, phoneSize: state.phoneSize)
             savedFrame = nil
+            lastDock = nil
+            placementRequested = false
+            let stage = revealPhoneOnExit
+            revealPhoneOnExit = true
+            showMain(stage: stage)
+            WindowDiagnostics.panel("immersive.exit", p)
         }
-        up = expanded
-        placementRequested = true
         p.standardWindowButton(.zoomButton)?.setAccessibilityLabel(expanded ? "키오스크 끄기" : "키오스크")
-        showMain()
+    }
+
+    /// The opening is only for a visible phone, never a different app that has covered it.
+    private func immersivePhoneFrame() -> CGRect? {
+        guard Permissions.accessibility, let phone = Mirroring.liveWindow(),
+              Mirroring.isInFrontOfOtherApplications(phone.id),
+              let frame = Mirroring.axFrame(), DockChange.near(frame, phone.rect) else { return nil }
+        return cgRect(frame)
+    }
+
+    private func updateImmersive() {
+        guard up, !NSApp.isHidden else { return }
+        immersive?.update(phone: immersivePhoneFrame())
     }
 
     static func fitExpanded(_ p: NSPanel, content c: WorkbenchContent, in frame: CGRect) {

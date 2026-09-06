@@ -1,4 +1,4 @@
-// A solid workbench surface behind iPhone Mirroring. There is no cutout and no separate surrounding windows.
+// The normal workbench surface behind iPhone Mirroring. Its views are lent to immersive covers while expanded.
 import AppKit
 
 final class WorkbenchContent: WorkbenchSurface {
@@ -8,6 +8,7 @@ final class WorkbenchContent: WorkbenchSurface {
     let band = PhoneBand()
     private let exitButton = WorkbenchButton(title: "창으로 돌아가기", target: nil, action: nil)
     weak var workbench: NSView?
+    var layoutSuspended = false
     var onExitExpanded: (() -> Void)?
     var expanded = false { didSet { needsLayout = true; exitButton.isHidden = !expanded } }
     var followedPhone: CGRect? { didSet { needsLayout = true } }
@@ -31,6 +32,7 @@ final class WorkbenchContent: WorkbenchSurface {
 
     override func layout() {
         super.layout()
+        guard !layoutSuspended else { return }
         let b = bounds
         let y = expanded ? max(0, (b.height - phoneSize.height) / 2) : Self.rimBottom
         let h = followedPhone ?? CGRect(x: b.maxX - Self.rimRight - phoneSize.width,
@@ -66,7 +68,7 @@ final class WorkbenchContent: WorkbenchSurface {
     }
 }
 
-/// Status and human approval controls, kept in the same backing window in both modes.
+/// Status and human approval controls. The same instance survives both window modes.
 final class PhoneBand: WorkbenchSurface {
     weak var state: AppState?
     private let question = WorkbenchLabel(labelWithString: "")
